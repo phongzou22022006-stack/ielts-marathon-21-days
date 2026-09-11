@@ -391,9 +391,7 @@ class IELTSMarathonApp {
 
               <!-- Passage -->
               <div class="p-4 bg-[var(--surface-muted)] rounded-lg text-xs sm:text-sm font-editorial leading-relaxed max-h-64 overflow-y-auto mb-4 border border-[var(--border-subtle)]">
-                ${dayData.reading.passage.split('
-
-').map(p => `<p class="mb-3">${p}</p>`).join('')}
+                ${dayData.reading.passage.split(/\n\s*\n/).map(p => `<p class="mb-3">${p}</p>`).join('')}
               </div>
 
               <!-- Questions -->
@@ -519,8 +517,7 @@ class IELTSMarathonApp {
 
                 <div id="listening-transcript-drawer" class="hidden p-3 bg-[var(--surface-muted)] rounded-lg text-xs space-y-3">
                   <div class="font-editorial text-xs leading-relaxed max-h-48 overflow-y-auto p-2 bg-[var(--surface)] rounded border border-[var(--border-subtle)]">
-                    ${dayData.listening.transcript.split('
-').map(l => `<p class="mb-1">${l}</p>`).join('')}
+                    ${dayData.listening.transcript.split(/\n/).map(l => `<p class="mb-1">${l}</p>`).join('')}
                   </div>
                   <div>
                     <h5 class="font-bold text-[var(--ink-primary)] mb-1">Phiếu Ghi 3 Lỗi Ưu tiên Listening hôm nay:</h5>
@@ -583,9 +580,7 @@ class IELTSMarathonApp {
                     ✨ Bài mẫu chuẩn Academic (Band 8.0+)
                   </h4>
                   <div class="text-xs sm:text-sm font-editorial leading-relaxed max-h-56 overflow-y-auto mb-2 text-[var(--ink-primary)]">
-                    ${dayData.writing.modelAnswer.split('
-
-').map(p => `<p class="mb-2">${p}</p>`).join('')}
+                    ${dayData.writing.modelAnswer.split(/\n\s*\n/).map(p => `<p class="mb-2">${p}</p>`).join('')}
                   </div>
                   <p class="text-[11px] text-[var(--ink-secondary)] italic border-t border-[var(--accent-amber)] pt-2">
                     <strong>Nhận xét:</strong> ${dayData.writing.examinerNotes}
