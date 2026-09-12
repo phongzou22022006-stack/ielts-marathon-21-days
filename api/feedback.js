@@ -52,10 +52,14 @@ async function callKey(key, messages) {
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
     body: JSON.stringify({ model: MODEL, messages, max_tokens: 320, temperature: 0.4 })
   });
-  if (!res.ok) return { status: res.status };
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const err = body && body.error && (body.error.message || body.error.code || body.error.type);
+    return { status: res.status, error: String(err || '').slice(0, 240) };
+  }
   const data = await res.json();
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  if (!content) return { status: -1 };
+  if (!content) return { status: -1, error: 'empty completion' };
   return { status: 0, content: content.trim() };
 }
 
@@ -88,6 +92,7 @@ module.exports = async function handler(req, res) {
 
   const messages = buildMessages(feature, text, context);
   let lastErr = '';
+  const reasons = [];
   for (let i = 0; i < KEYS.length; i++) {
     const key = KEYS[cursor++ % KEYS.length];
     const out = await callKey(key, messages);
@@ -95,7 +100,8 @@ module.exports = async function handler(req, res) {
       res.json({ ok: true, content: out.content });
       return;
     }
-    if (out.status > 0) lastErr = 'HTTP ' + out.status;
+    lastErr = 'HTTP ' + out.status;
+    if (out.error && !reasons.includes(out.error)) reasons.push(out.error);
   }
-  res.status(502).json({ ok: false, error: 'Toàn bộ key OpenAI thất bại (' + (lastErr || 'lỗi không đọc được') + '). Kiểm tra hạn mức hoặc tín dụng của từng key.' });
+  res.status(502).json({ ok: false, error: 'Toàn bộ key OpenAI thất bại (' + lastErr + '). Lý do: ' + (reasons.join(' | ') || 'không rõ') + '. Kiểm tra hạn mức hoặc tín dụng của từng key.' });
 };
