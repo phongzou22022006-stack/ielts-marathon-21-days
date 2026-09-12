@@ -66,7 +66,7 @@ export const StorageService = {
   getUser() {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.USER_PROFILE)) || {
       name: "Người học IELTS",
-      streak: 3,
+      streak: 0,
       startDate: new Date().toISOString(),
       onboarded: true
     };

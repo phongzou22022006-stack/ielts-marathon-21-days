@@ -222,6 +222,20 @@ class IELTSMarathonApp {
     const completedDays = Object.keys(allProgress).length;
     const totalN = this.totalDays;
     const progressPercent = Math.round((completedDays / totalN) * 100);
+    const streak = (() => {
+      const studied = new Set();
+      Object.values(allProgress).forEach(p => {
+        if (p && p.lastUpdated) studied.add(new Date(p.lastUpdated).toDateString());
+      });
+      let cursor = new Date();
+      if (!studied.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+      let s = 0;
+      while (studied.has(cursor.toDateString())) {
+        s++;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return s;
+    })();
 
     let phasesHtml = '';
     this.trackMeta.phases.forEach(phaseMeta => {
@@ -268,7 +282,7 @@ class IELTSMarathonApp {
             <div>
               <div class="flex items-center gap-2 mb-2">
                 <span class="badge ${this.trackMeta.badgeClass} font-mono">${this.trackMeta.label.toUpperCase()}</span>
-                <span class="badge badge-sage font-mono">🔥 Streak: ${user.streak} ngày</span>
+                <span class="badge badge-sage font-mono">🔥 Streak: ${streak} ngày</span>
               </div>
               <h1 class="font-display text-2xl sm:text-3xl font-extrabold text-[var(--ink-primary)] mb-2">
                 IELTS Marathon: Tự học Có kiểm soát
