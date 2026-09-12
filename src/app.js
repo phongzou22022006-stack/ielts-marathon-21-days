@@ -1512,7 +1512,7 @@ class IELTSMarathonApp {
                 <div class="flex items-center gap-2 mb-1">
                   <span class="badge badge-muted font-mono text-xs">${err.skill}</span>
                   <span class="font-mono text-xs text-[var(--ink-secondary)]">Ngày ${String(err.day).padStart(2, '0')}</span>
-                  ${err.recurring ? '<span class="badge badge-terracotta text-[10px]">⚠️ Lặp lại ≥ 2 lần (Ưu tiên Ngày 18)</span>' : ''}
+                  ${err.recurring ? `<span class="badge badge-terracotta text-[10px]">⚠️ Lặp lại ≥ 2 lần (Ưu tiên ngày khắc phục ${this._fixDayLabel()})</span>` : ''}
                 </div>
                 <h4 class="font-display text-sm font-bold text-[var(--ink-primary)] mb-0.5">${err.errorType}</h4>
                 <p class="text-xs text-[var(--ink-secondary)]">${err.description}</p>
@@ -1601,8 +1601,8 @@ class IELTSMarathonApp {
             <h4 class="font-bold text-sm text-[var(--ink-primary)] mb-2 flex items-center gap-2">
               <span>📁 06_Checkpoints_Audit</span>
             </h4>
-            <p class="text-xs text-[var(--ink-secondary)] mb-3">Biên bản đánh giá định kỳ Ngày 7, Ngày 14 và Ngày 21.</p>
-            <span class="badge badge-muted text-xs">3 mốc kiểm soát</span>
+            <p class="text-xs text-[var(--ink-secondary)] mb-3">Biên bản đánh giá định kỳ ${this.trackMeta.checkpoints.map(c => `Ngày ${c}`).join(', ')}${this.trackMeta.checkpoints.includes(this.totalDays) ? '' : ' và Ngày ' + this.totalDays}.</p>
+            <span class="badge badge-muted text-xs">${this.trackMeta.checkpoints.length} mốc kiểm soát</span>
           </div>
         </div>
       </div>
@@ -1617,6 +1617,12 @@ class IELTSMarathonApp {
     a.href = url;
     a.download = `IELTS-Marathon-Portfolio-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
+  }
+
+  _fixDayLabel() {
+    if (this.totalDays === 21) return 'Ngày 18';
+    const phase2 = this.trackMeta.phases && this.trackMeta.phases[1];
+    return phase2 ? phase2.range.replace(/Ngày /g, 'Ngày ') : 'cuối giai đoạn 2';
   }
 
   _normalizeAnswer(v) {
@@ -1845,10 +1851,10 @@ renderMockTest() {
             Kế hoạch Tự học 30 Ngày Tiếp theo
           </h3>
           <div class="space-y-3 text-xs sm:text-sm text-[var(--ink-secondary)] leading-relaxed">
-            <p><strong>Tuần 1:</strong> Rà soát toàn bộ Nhật ký lỗi Ngày 18, tập trung xử lý dứt điểm các lỗi phát âm âm cuối và các câu Task 2 thiếu mệnh đề chính.</p>
-            <p><strong>Tuần 2:</strong> Duy trì nhịp học 60 phút/ngày: 1 bài đọc chuyên sâu + 1 section Listening Part 3/4.</p>
-            <p><strong>Tuần 3:</strong> Luyện viết Task 1 theo dạng bài tổng hợp (Mixed charts & Process) và tự chép lời 2 bài Speaking mỗi tuần.</p>
-            <p><strong>Tuần 4:</strong> Làm 2 đề thi thử chuẩn Cambridge trong điều kiện bấm giờ nghiêm ngặt trước ngày thi thật.</p>
+            <p><strong>${this.totalDays === 21 ? 'Tuần 1:' : 'Giai đoạn 1:'}</strong> Rà soát toàn bộ Nhật ký lỗi ${this.totalDays === 21 ? 'Ngày 18' : 'các ngày cuối'}, tập trung xử lý dứt điểm các lỗi phát âm âm cuối và các câu Task 2 thiếu mệnh đề chính.</p>
+            <p><strong>${this.totalDays === 21 ? 'Tuần 2:' : 'Giai đoạn 2:'}</strong> Duy trì nhịp học 60 phút/ngày: 1 bài đọc chuyên sâu + 1 section Listening Part 3/4.</p>
+            <p><strong>${this.totalDays === 21 ? 'Tuần 3:' : 'Giai đoạn 3:'}</strong> Luyện viết Task 1 theo dạng bài tổng hợp (Mixed charts & Process) và tự chép lời 2 bài Speaking mỗi tuần.</p>
+            <p><strong>${this.totalDays === 21 ? 'Tuần 4:' : 'Giai đoạn 4:'}</strong> Làm 2 đề thi thử chuẩn Cambridge trong điều kiện bấm giờ nghiêm ngặt trước ngày thi thật.</p>
           </div>
         </div>
       </div>
