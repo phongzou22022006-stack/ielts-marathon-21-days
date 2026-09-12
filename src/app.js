@@ -759,7 +759,9 @@ class IELTSMarathonApp {
                 </div>
                 <span class="badge badge-sage font-mono text-xs">${dayData.listening.part}</span>
               </div>
-              <p class="text-xs text-[var(--ink-secondary)] mb-4">Dạng câu hỏi: <strong>${dayData.listening.type}</strong></p>
+              <p class="text-xs text-[var(--ink-secondary)] mb-4">Dạng câu hỏi: <strong>${dayData.listening.type}</strong>
+                ${dayData.listening.audioScript ? ` · <span class="badge badge-sage text-[10px]">🎧 Giọng bản ngữ (en-GB)</span>` : ''}
+              </p>
 
               <!-- Audio Player -->
               <div class="p-4 bg-[var(--surface-muted)] rounded-lg border border-[var(--border-subtle)] mb-4">
@@ -1161,7 +1163,7 @@ class IELTSMarathonApp {
         const badge = document.getElementById('listen-counter-badge');
         if (badge) badge.textContent = `Lượt nghe: ${progress.listeningListenCount}`;
       }).catch(err => {
-        alert('Trình phát Audio Listening đã sẵn sàng (Audio mô phỏng). Bạn có thể bấm tua, đổi tốc độ hoặc đọc transcript để đối chiếu.');
+        alert('Trình phát Audio Listening đã sẵn sàng. Bạn có thể bấm tua, đổi tốc độ hoặc đọc transcript để đối chiếu.');
       });
     } else {
       audio.pause();

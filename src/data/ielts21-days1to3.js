@@ -58,6 +58,7 @@ export const DAYS_1_3 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 1,
       theme: "sự tập trung",
       type: "Điền số & điền từ (Form Completion)",
@@ -172,6 +173,7 @@ export const DAYS_1_3 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 2,
       theme: "giáo dục",
       type: "Điền biểu mẫu (Form Completion)",
@@ -295,6 +297,7 @@ export const DAYS_1_3 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 3,
       theme: "thư viện & không gian công cộng",
       type: "Multiple Choice (Part 2 - Giới thiệu thư viện mới)",

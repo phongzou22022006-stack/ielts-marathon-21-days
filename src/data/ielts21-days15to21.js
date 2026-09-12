@@ -87,6 +87,7 @@ export const DAYS_15_21 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 15,
       theme: "giấc ngủ và trí nhớ",
       type: "Part 4 (Bài giảng - Sleep and Memory)",
@@ -201,6 +202,7 @@ export const DAYS_15_21 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 16,
       theme: "đại học và việc làm",
       type: "Part 1 (Đăng ký khóa học viết)",
@@ -316,6 +318,7 @@ export const DAYS_15_21 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 17,
       theme: "phát âm và khóa học luyện nói",
       type: "Part 2 (Giới thiệu khóa học phát âm)",
@@ -434,6 +437,7 @@ export const DAYS_15_21 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 18,
       theme: "chống lãng phí thực phẩm",
       type: "Part 3 (Thảo luận dự án giảm lãng phí)",
@@ -554,6 +558,7 @@ export const DAYS_15_21 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 19,
       theme: "AI trong giáo dục",
       type: "Part 3 (Thảo luận về AI tutor)",
@@ -726,6 +731,7 @@ export const DAYS_15_21 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 20,
       theme: "đô thị bền vững (mock mở rộng)",
       type: "Full-listening review (Part 4 - Bài giảng đô thị bền vững)",
@@ -846,6 +852,7 @@ export const DAYS_15_21 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 21,
       theme: "tổng kết lộ trình",
       type: "Part 1 (Đặt lịch tổng kết cuối khóa)",

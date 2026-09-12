@@ -58,6 +58,7 @@ export const DAYS_8_14 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 8,
       theme: "video ngắn",
       type: "Multiple Choice (Part 2 - Câu lạc bộ làm video)",
@@ -180,6 +181,7 @@ export const DAYS_8_14 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 9,
       theme: "đô thị",
       type: "Map (Part 2 - Hướng dẫn công viên mới)",
@@ -295,6 +297,7 @@ export const DAYS_8_14 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 10,
       theme: "kể chuyện",
       type: "Short Answer (Part 2 - CLB kể chuyện)",
@@ -408,6 +411,7 @@ export const DAYS_8_14 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 11,
       theme: "làm việc từ xa",
       type: "Form Completion (Part 1 - Đăng ký khoá học online)",
@@ -522,6 +526,7 @@ export const DAYS_8_14 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 12,
       theme: "công việc",
       type: "Multiple Choice (Part 3 - Dự án cải thiện văn phòng)",
@@ -636,6 +641,7 @@ export const DAYS_8_14 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 13,
       theme: "truyền thông",
       type: "Short Answer (Part 2 - Hội nghị báo cáo online)",
@@ -756,6 +762,7 @@ export const DAYS_8_14 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 14,
       theme: "đánh giá",
       type: "Review (Part 1 - Đặt lịch đánh giá kỹ năng)",

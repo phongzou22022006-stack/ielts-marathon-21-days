@@ -55,6 +55,7 @@ export const DAYS_4_7 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 4,
       theme: "giao tiếp",
       type: "Label the map (Part 2 - Trung tâm giao tiếp)",
@@ -172,6 +173,7 @@ export const DAYS_4_7 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 5,
       theme: "học ngôn ngữ",
       type: "Điền vào bảng (Part 1 - Đăng ký câu lạc bộ ngôn ngữ)",
@@ -287,6 +289,7 @@ export const DAYS_4_7 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 6,
       theme: "dữ liệu",
       type: "Multiple Choice (Part 2 - Báo cáo xu hướng)",
@@ -405,6 +408,7 @@ export const DAYS_4_7 = [
       }
     },
     listening: makeListening({
+      track: "ielts21",
       day: 7,
       theme: "động lực học tập",
       type: "Điền vào biểu mẫu (Part 1 - Khảo sát thói quen học)",
