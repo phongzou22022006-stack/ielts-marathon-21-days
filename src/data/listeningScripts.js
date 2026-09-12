@@ -338,6 +338,149 @@ Advisor: Each student gets fifteen minutes, so please come well prepared to talk
 
   // ==================== FOUNDATION 14 ====================
 
+  "foundation14-d01": {
+    voice: "en-GB-LibbyNeural",
+    transcript: `Teacher: Good morning, everyone. Let me introduce a new student. This is Mai.
+Mai: Hello, everyone.
+Teacher: Where are you from, Mai?
+Mai: I'm from Da Nang. I am a university student. I study marketing.
+Teacher: Do you like it?
+Mai: Yes, I like it a lot. It's interesting. Also, I work part-time at a bookshop.
+Mai: I am very busy, but I enjoy my work.
+Teacher: Great. When do you study English?
+Mai: I study English in the evening after work. I am usually free at nine.`,
+    questions: [
+      { id: "f1-lq1", prompt: "[1] Mai is from [_____].", answer: "Da Nang" },
+      { id: "f1-lq2", prompt: "[2] Mai is a university [_____].", answer: "student" },
+      { id: "f1-lq3", prompt: "[3] Mai studies [_____].", answer: "marketing" },
+      { id: "f1-lq4", prompt: "[4] Mai works part-time at a [_____].", answer: "bookshop" },
+      { id: "f1-lq5", prompt: "[5] Mai studies English in the [_____].", answer: "evening" }
+    ]
+  },
+
+  "foundation14-d02": {
+    voice: "en-GB-SoniaNeural",
+    transcript: `Clerk: Hello, English Club registration line. How can I help?
+Student: Yes. Are you open on Saturdays?
+Clerk: Yes, we are. The club isn't far from the station; it's on Rose Street.
+Student: Do I need to bring a teacher's form?
+Clerk: No, you don't. But please bring your student card when you come.
+Student: Does the beginner class start this month?
+Clerk: Yes, it does. It starts on Monday at six thirty. The class doesn't run on Sundays.
+Student: Great. Thanks for your help.`,
+    questions: [
+      { id: "f2-lq1", prompt: "[1] The club is on [_____] Street.", answer: "Rose" },
+      { id: "f2-lq2", prompt: "[2] Students don't need to bring a teacher's [_____].", answer: "form" },
+      { id: "f2-lq3", prompt: "[3] Students should bring their student [_____].", answer: "card" },
+      { id: "f2-lq4", prompt: "[4] The beginner class starts on [_____].", answer: "Monday" },
+      { id: "f2-lq5", prompt: "[5] The class is not held on [_____].", answer: "Sunday" }
+    ]
+  },
+
+  "foundation14-d03": {
+    voice: "en-GB-RyanNeural",
+    transcript: `I usually review vocabulary before breakfast, because that is when my mind is fresh. At the moment, I am reading a short story for my evening class. Yesterday, I watched two lessons on grammar and wrote ten example sentences. Next week, I am going to try a new plan: five minutes of speaking practice every day. These four moments, habit, now, past and plan, help me choose the correct verb form.`,
+    questions: [
+      { id: "f3-lq1", prompt: "[1] The speaker usually reviews vocabulary before [_____].", answer: "breakfast" },
+      { id: "f3-lq2", prompt: "[2] At the moment, he is reading a short [_____].", answer: "story" },
+      { id: "f3-lq3", prompt: "[3] Yesterday, he watched two lessons on [_____].", answer: "grammar" },
+      { id: "f3-lq4", prompt: "[4] Next week, he is going to try a new [_____].", answer: "plan" },
+      { id: "f3-lq5", prompt: "[5] The new plan is five minutes of speaking [_____] every day.", answer: "practice" }
+    ]
+  },
+
+  "foundation14-d04": {
+    voice: "en-GB-LibbyNeural",
+    transcript: `Welcome to our small café and library corner. There is a small café near the entrance, and the staff serve coffee and tea. On the main shelf, there are many books, but we only have one interesting novel about the sea. Please remember: a book is borrowed for two weeks, an umbrella can be taken on rainy days, and the reading room closes at eight. Some nouns can be counted, like books; other nouns, like information, cannot be counted, so we say some information, not an information.`,
+    questions: [
+      { id: "f4-lq1", prompt: "[1] There is a small [_____] near the entrance.", answer: "café" },
+      { id: "f4-lq2", prompt: "[2] They only have one interesting [_____] about the sea.", answer: "novel" },
+      { id: "f4-lq3", prompt: "[3] A book is borrowed for [_____] weeks.", answer: "two" },
+      { id: "f4-lq4", prompt: "[4] An [_____] can be taken on rainy days.", answer: "umbrella" },
+      { id: "f4-lq5", prompt: "[5] Some nouns, like [_____], cannot be counted.", answer: "information" }
+    ]
+  },
+
+  "foundation14-d05": {
+    voice: "en-GB-SoniaNeural",
+    transcript: `Instead of learning ten isolated words, try learning fixed phrases, or collocations. For example, we say make progress, not do progress. We say pay attention in class, and we can build a habit over time. In my class, students make a list of five phrases, then they use each phrase in a true sentence about themselves. Be careful with fixed pairs: we take a break, we spend time, and we make good use of a short session.`,
+    questions: [
+      { id: "f5-lq1", prompt: "[1] Use the phrase make [_____], not 'do progress'.", answer: "progress" },
+      { id: "f5-lq2", prompt: "[2] Students should pay [_____] in class.", answer: "attention" },
+      { id: "f5-lq3", prompt: "[3] Learners can build a [_____] over time.", answer: "habit" },
+      { id: "f5-lq4", prompt: "[4] In class, students make a list of [_____] phrases.", answer: "five" },
+      { id: "f5-lq5", prompt: "[5] We take a [_____], and we spend time.", answer: "break" }
+    ]
+  },
+
+  "foundation14-d06": {
+    voice: "en-GB-RyanNeural",
+    transcript: `Thanh: My speaking recording surprised me. The first attempt was short, but the second one improved a lot, and improvement is easy to hear.
+Linh: I agree. I used to feel no confidence, but this week I felt more confident because I prepared small answers.
+Minh: For me, the key is to communicate clearly, not to be perfect. Clear communication helps both sides.
+Thanh: When a task succeeds, we feel successful. So it helps to set tiny goals you can actually achieve.`,
+    questions: [
+      { id: "f6-lq1", prompt: "[1] Thanh's second recording [_____] a lot.", answer: "improved" },
+      { id: "f6-lq2", prompt: "[2] Thanh says [_____] is easy to hear.", answer: "improvement" },
+      { id: "f6-lq3", prompt: "[3] Linh felt more [_____] this week.", answer: "confident" },
+      { id: "f6-lq4", prompt: "[4] Minh wants to communicate [_____], not to be perfect.", answer: "clearly" },
+      { id: "f6-lq5", prompt: "[5] When a task [_____], we feel successful.", answer: "succeeds" }
+    ]
+  },
+
+  "foundation14-d07": {
+    voice: "en-GB-LibbyNeural",
+    transcript: `I used to study for a long time on Sunday, but I often forgot everything by Tuesday. So I changed my routine. Because short sessions are easier to repeat, I now study twenty minutes every morning. If I miss the morning, I do a five-minute review at lunch. Although I study less each time, I remember more, because the material returns more often. When I manage to complete a whole week, I give myself a small reward.`,
+    questions: [
+      { id: "f7-lq1", prompt: "[1] The speaker used to study for a long time on [_____].", answer: "Sunday" },
+      { id: "f7-lq2", prompt: "[2] Now he studies for [_____] minutes every morning.", answer: "twenty" },
+      { id: "f7-lq3", prompt: "[3] If he misses the morning, he does a five-minute review at [_____].", answer: "lunch" },
+      { id: "f7-lq4", prompt: "[4] [_____] he studies less each time, he remembers more.", answer: "Although" },
+      { id: "f7-lq5", prompt: "[5] When he completes a whole [_____], he gives himself a reward.", answer: "week" }
+    ]
+  },
+
+  "foundation14-d08": {
+    voice: "en-GB-SoniaNeural",
+    transcript: `Interviewer: Do you enjoy learning English?
+Mai: I'd say yes, mainly because English gives me access to more information. For example, I can watch interviews without waiting for a translation. As a result, I feel more independent than before.
+Interviewer: What part is difficult for you?
+Mai: Listening is probably the hardest, because people speak faster than the recordings I used at school. However, I notice progress when I listen to short lessons.`,
+    questions: [
+      { id: "f8-lq1", prompt: "[1] Mai says English gives her access to more [_____].", answer: "information" },
+      { id: "f8-lq2", prompt: "[2] She gives an example of watching [_____].", answer: "interviews" },
+      { id: "f8-lq3", prompt: "[3] Her direct answer begins with the phrase 'I'd say [_____]'.", answer: "yes" },
+      { id: "f8-lq4", prompt: "[4] The hardest part for her is [_____].", answer: "listening" },
+      { id: "f8-lq5", prompt: "[5] As a result, she feels more [_____] than before.", answer: "independent" }
+    ]
+  },
+
+  "foundation14-d09": {
+    voice: "en-GB-RyanNeural",
+    transcript: `Today I wrote a paragraph about the ten-minute review. My first sentence states the main idea: short recall activities reveal real learning. Then I explain the reason by comparing rereading with writing from memory. For example, when students close their books and write three key points, they soon see which information is missing. Finally, my last sentence returns to the idea with a condition: the routine works best if people repeat it regularly.`,
+    questions: [
+      { id: "f9-lq1", prompt: "[1] The main idea is that short recall activities [_____] real learning.", answer: "reveal" },
+      { id: "f9-lq2", prompt: "[2] The speaker compares rereading with writing from [_____].", answer: "memory" },
+      { id: "f9-lq3", prompt: "[3] Students write [_____] key points after closing their books.", answer: "three" },
+      { id: "f9-lq4", prompt: "[4] The last sentence returns to the idea with a [_____].", answer: "condition" },
+      { id: "f9-lq5", prompt: "[5] The routine works best if people [_____] it regularly.", answer: "repeat" }
+    ]
+  },
+
+  "foundation14-d10": {
+    voice: "en-GB-LibbyNeural",
+    transcript: `Host: Elena, how does your ten-minute review work?
+Elena: Students first close their books and write down three key points from the lesson. Then they compare their notes with a partner. Only after this exchange do they reopen the lesson. The activity isn't used for marks; its purpose is to make gaps visible while the lesson is still recent. Some students feel uncomfortable at first, because they remember less than they expected. That difficulty is useful information, not proof of failure.`,
+    questions: [
+      { id: "f10-lq1", prompt: "[1] Students first close their books and write down [_____] key points.", answer: "three" },
+      { id: "f10-lq2", prompt: "[2] After writing, students compare their notes with a [_____].", answer: "partner" },
+      { id: "f10-lq3", prompt: "[3] Only after this exchange do they reopen the [_____].", answer: "lesson" },
+      { id: "f10-lq4", prompt: "[4] The activity is not used to calculate [_____].", answer: "marks" },
+      { id: "f10-lq5", prompt: "[5] Some students feel [_____] at first.", answer: "uncomfortable" },
+      { id: "f10-lq6", prompt: "[6] That difficulty is useful [_____], not proof of failure.", answer: "information" }
+    ]
+  },
+
   "foundation14-d11": {
     voice: "en-GB-LibbyNeural",
     transcript: `Receptionist: Learning Centre. How can I help?
@@ -356,6 +499,43 @@ Receptionist: That's right.`,
       { id: "f11-lq4", prompt: "[4] Number of students: [_____].", answer: "four" },
       { id: "f11-lq5", prompt: "[5] Item to bring: [_____].", answer: "student card" },
       { id: "f11-lq6", prompt: "[6] Drink allowed: [_____].", answer: "water" }
+    ]
+  },
+
+  "foundation14-d12": {
+    voice: "en-GB-SoniaNeural",
+    transcript: `Examiner: Let me explain the three parts of the Speaking test. In Part one, I will ask familiar questions about your home, your studies or your hobbies, and a short answer of two or three sentences is enough. In Part two, I will give you a card, and you will speak alone for up to two minutes about the topic on the card. In Part three, we discuss broader questions, for example whether technology helps people learn on their own. In that section, a good answer includes a clear view, a reason, an example and a sensible limit.`,
+    questions: [
+      { id: "f12-lq1", prompt: "[1] Part one questions are about your home, your studies or your [_____].", answer: "hobbies" },
+      { id: "f12-lq2", prompt: "[2] A short answer of [_____] or three sentences is enough in Part one.", answer: "two" },
+      { id: "f12-lq3", prompt: "[3] In Part two, you speak alone for up to [_____] minutes.", answer: "two" },
+      { id: "f12-lq4", prompt: "[4] Part three includes broader questions, for example about [_____] and learning.", answer: "technology" },
+      { id: "f12-lq5", prompt: "[5] A good Part three answer includes a clear view, a reason, an [_____] and a sensible limit.", answer: "example" }
+    ]
+  },
+
+  "foundation14-d13": {
+    voice: "en-GB-RyanNeural",
+    transcript: `Teacher: When you describe a table, do not start with numbers. Begin with an overview that states the main trend. For example, study time increased from twenty to forty minutes, so we say it doubled. Then add detail with precise prepositions. We use from for the starting point and to for the end point: increased from twenty to forty. We use by for the size of a change: video use increased by twenty-five minutes. Finally, report a value at a given time with a phrase like ranked first at seventy minutes.`,
+    questions: [
+      { id: "f13-lq1", prompt: "[1] Begin with an overview that states the main [_____].", answer: "trend" },
+      { id: "f13-lq2", prompt: "[2] Study time doubled from [_____] to forty minutes.", answer: "twenty" },
+      { id: "f13-lq3", prompt: "[3] We use [_____] for the starting point.", answer: "from" },
+      { id: "f13-lq4", prompt: "[4] We use by for the size of a [_____].", answer: "change" },
+      { id: "f13-lq5", prompt: "[5] Video use increased by [_____] minutes.", answer: "twenty-five" },
+      { id: "f13-lq6", prompt: "[6] A value at a given time can be reported with ranked [_____] at seventy minutes.", answer: "first" }
+    ]
+  },
+
+  "foundation14-d14": {
+    voice: "en-GB-LibbyNeural",
+    transcript: `Teacher: Welcome to your final review. The test has five groups. Group A checks sentence structure; for example, my teacher is very patient, where is is the correct verb. Group B checks time markers: usually needs the present simple, yesterday needs the past, and next week needs a future form. Group C checks fixed phrases: we make progress and take notes. Group D is a short reading with true, false and not given statements. In groups E, writing and speaking, produce a final product of about eighty to one hundred words.`,
+    questions: [
+      { id: "f14-lq1", prompt: "[1] Group A checks sentence [_____].", answer: "structure" },
+      { id: "f14-lq2", prompt: "[2] 'Usually' needs the present [_____].", answer: "simple" },
+      { id: "f14-lq3", prompt: "[3] We make [_____] and take notes.", answer: "progress" },
+      { id: "f14-lq4", prompt: "[4] Group D has true, false and not [_____] statements.", answer: "given" },
+      { id: "f14-lq5", prompt: "[5] In Group E, the writing product is about eighty to one hundred [_____].", answer: "words" }
     ]
   }
 };
@@ -386,5 +566,18 @@ export const LISTENING_DURATIONS = {
   "ielts21-d19": "00:42",
   "ielts21-d20": "00:38",
   "ielts21-d21": "00:47",
-  "foundation14-d11": "00:56"
+  "foundation14-d01": "00:53",
+  "foundation14-d02": "00:41",
+  "foundation14-d03": "00:30",
+  "foundation14-d04": "00:37",
+  "foundation14-d05": "00:30",
+  "foundation14-d06": "00:37",
+  "foundation14-d07": "00:34",
+  "foundation14-d08": "00:32",
+  "foundation14-d09": "00:31",
+  "foundation14-d10": "00:39",
+  "foundation14-d11": "00:56",
+  "foundation14-d12": "00:36",
+  "foundation14-d13": "00:36",
+  "foundation14-d14": "00:43"
 };
