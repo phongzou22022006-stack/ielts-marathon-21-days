@@ -3,6 +3,7 @@ import { CURRICULUM_DATA, TRACKS, FOUNDATION_14_DAYS } from './data/curriculumDa
 import { RHYTHM_CONFIGS } from './data/rhythmConfig.js';
 import { StorageService } from './services/storageService.js';
 import { AudioRecorderEngine } from './services/audioRecorder.js';
+import { requestAiFeedback, isAiEnabled, setAiEnabled, aiRemainingToday } from './services/aiFeedback.js';
 
 const DATA_SETS = {
   ielts21: CURRICULUM_DATA,
@@ -11,6 +12,10 @@ const DATA_SETS = {
 
 function escapeForAttr(val) {
   return String(val).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function escapeHtml(val) {
+  return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 class IELTSMarathonApp {
@@ -711,6 +716,18 @@ class IELTSMarathonApp {
                   </button>
                 </div>
               ` : ''}
+
+              <div class="mt-4 p-4 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-muted)]">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold text-[var(--accent-terracotta)]">🤖 AI Phản hồi cá nhân</span>
+                  <span class="font-mono text-[11px] text-[var(--ink-muted)]">GPT-4o-mini · vài lượt/ngày</span>
+                </div>
+                <p class="text-[11px] text-[var(--ink-secondary)] mb-2">Chấm nhanh bản viết của bạn theo tiêu chí thực, chỉ rõ lỗi và mẹo sửa. Nếu mạng lỗi, các bước tự học vẫn hoạt động bình thường.</p>
+                <button onclick="window.app.aiAnalyze('writing')" id="ai-writing-btn" class="btn btn-secondary text-xs w-full py-1.5">
+                  ✨ Nhận phản hồi AI
+                </button>
+                <div id="ai-writing-box" class="hidden mt-2 text-xs"></div>
+              </div>
             </section>
             ` : ''}
 
@@ -767,6 +784,18 @@ class IELTSMarathonApp {
                   </button>
                   <audio id="playback-audio-2" controls class="h-8 flex-1 hidden"></audio>
                 </div>
+              </div>
+
+              <div class="mt-4 p-4 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-muted)]">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold text-[var(--accent-terracotta)]">🤖 AI Phản hồi cá nhân</span>
+                  <span class="font-mono text-[11px] text-[var(--ink-muted)]">GPT-4o-mini · vài lượt/ngày</span>
+                </div>
+                <p class="text-[11px] text-[var(--ink-secondary)] mb-2">Chấm bản chép lời của bạn: mạch lạc, lỗi nổi bật và mẹo nói tự nhiên hơn.</p>
+                <button onclick="window.app.aiAnalyze('speaking')" id="ai-speaking-btn" class="btn btn-secondary text-xs w-full py-1.5">
+                  ✨ Nhận phản hồi AI
+                </button>
+                <div id="ai-speaking-box" class="hidden mt-2 text-xs"></div>
               </div>
             </section>
             ` : ''}
@@ -1058,6 +1087,52 @@ class IELTSMarathonApp {
     const progress = StorageService.getDayProgress(this.currentDay);
     progress.speakingTranscript = text;
     StorageService.saveDayProgress(this.currentDay, progress);
+  }
+
+  currentAiText(kind) {
+    const store = StorageService.getDayProgress(this.currentDay, this.track);
+    if (kind === 'writing') {
+      const rw = document.getElementById('rewrite-textarea');
+      if (rw && rw.value.trim()) return rw.value.trim();
+      const fd = document.getElementById('first-draft-textarea');
+      if (fd && fd.value.trim()) return fd.value.trim();
+      return (store.writingRewrite || store.writingFirstDraft || '').trim();
+    }
+    const sp = document.getElementById('speaking-transcript-input');
+    if (sp && sp.value.trim()) return sp.value.trim();
+    return (store.speakingTranscript || '').trim();
+  }
+
+  async aiAnalyze(kind) {
+    const boxId = kind === 'writing' ? 'ai-writing-box' : 'ai-speaking-box';
+    const btnId = kind === 'writing' ? 'ai-writing-btn' : 'ai-speaking-btn';
+    const box = document.getElementById(boxId);
+    const btn = document.getElementById(btnId);
+    if (!box) return;
+    const draft = this.currentAiText(kind);
+    const show = (html) => {
+      box.classList.remove('hidden');
+      box.innerHTML = html;
+    };
+    if (draft.length < 10) {
+      show('<p class="text-[var(--ink-muted)]">Chưa có nội dung đủ dài để phân tích' +
+        (kind === 'writing' ? ' — viết bản nháp trước đã.' : ' — chép lời vào ô bản chép tiếng Anh trước đã.') + '</p>');
+      return;
+    }
+    if (btn) btn.disabled = true;
+    show('<p class="text-[var(--ink-muted)]">Đang phân tích, chờ vài giây...</p>');
+    try {
+      const day = this.curriculum[this.currentDay - 1] || {};
+      const context = kind === 'writing'
+        ? 'Ngày ' + this.currentDay + ' / ' + this.trackMeta.label + '. Đề bài: ' + (day.writing && day.writing.task ? day.writing.task : '') + ' — yêu cầu ' + (day.writing && day.writing.targetWords ? day.writing.targetWords : 'theo đề') + '.'
+        : 'Ngày ' + this.currentDay + ' / ' + this.trackMeta.label + '. Phần: ' + ((day.speaking && day.speaking.part) || 'Speaking').slice(0, 200) + '.';
+      const content = await requestAiFeedback({ feature: kind, text: draft, context });
+      show('<div class="whitespace-pre-wrap leading-relaxed text-[var(--ink-primary)]">' + escapeHtml(content) + '</div>');
+    } catch (e) {
+      show('<p class="text-[var(--accent-terracotta)]">⚠️ ' + escapeForAttr(e.message) + ' — Các bước tự học vẫn dùng bình thường.</p>');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   saveVocabExample(term, example) {
@@ -1469,6 +1544,16 @@ renderMockTest() {
             </button>
           </div>
 
+          <div class="pt-4 border-t border-[var(--border-subtle)]">
+            <label class="font-display text-sm font-bold text-[var(--ink-primary)] block mb-1">🤖 AI Phản hồi cá nhân:</label>
+            <div class="flex items-center gap-3">
+              <button onclick="window.app.toggleAi()" id="ai-toggle-btn" class="btn btn-secondary text-xs py-2 px-4">
+                ${isAiEnabled() ? '✅ Đang bật (Nhấn để tắt)' : '⬜ Đang tắt (Nhấn để bật)'}
+              </button>
+              <span class="text-[11px] text-[var(--ink-secondary)]">Còn ${aiRemainingToday()} lượt hôm nay. Dùng model rẻ + giới hạn để tiết kiệm tối đa.</span>
+            </div>
+          </div>
+
           <div class="pt-4 border-t border-[var(--border-subtle)] space-y-3">
             <label class="font-display text-sm font-bold text-[var(--ink-primary)] block">Dữ liệu & Bộ nhớ:</label>
             <div class="flex gap-3">
@@ -1490,6 +1575,14 @@ renderMockTest() {
       localStorage.clear();
       alert('Đã xóa toàn bộ dữ liệu. Ứng dụng sẽ khởi động lại.');
       window.location.reload();
+    }
+  }
+
+  toggleAi() {
+    setAiEnabled(!isAiEnabled());
+    const btn = document.getElementById('ai-toggle-btn');
+    if (btn) {
+      btn.textContent = isAiEnabled() ? '✅ Đang bật (Nhấn để tắt)' : '⬜ Đang tắt (Nhấn để bật)';
     }
   }
 }
