@@ -1,18 +1,17 @@
-// IELTS Marathon - Serverless NVIDIA proxy (Vercel Functions)
-// Uses build.nvidia.com OpenAI-compatible endpoint. Holds up to 4 keys as
-// env vars NVIDIA_API_KEY_1..4 (fallback NVIDIA_API_KEY), rotates them,
-// skips dead/quota-exhausted keys, and enforces soft per-hour/per-day caps.
-const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
-const MODEL = process.env.NVIDIA_MODEL || 'deepseek-ai/deepseek-v3';
-const DISALLOWS_TEMPERATURE = /r1|reason|thinking/i.test(MODEL);
+// IELTS Marathon - Serverless Google Gemini proxy (Vercel Functions)
+// Uses the Generative Language API OpenAI-compatible endpoint. Holds up to 4
+// keys as env vars GEMINI_API_KEY_1..4 (fallback GEMINI_API_KEY), rotates
+// them, skips dead/quota-exhausted keys, and enforces soft per-hour/day caps.
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 const KEYS = [];
 for (let i = 1; i <= 4; i++) {
-  const k = process.env['NVIDIA_API_KEY_' + i] || process.env['NVIDIA_API_KEY' + i];
+  const k = process.env['GEMINI_API_KEY_' + i] || process.env['GEMINI_API_KEY' + i];
   if (k) KEYS.push(k);
 }
-if (process.env.NVIDIA_API_KEY && !KEYS.includes(process.env.NVIDIA_API_KEY)) {
-  KEYS.push(process.env.NVIDIA_API_KEY);
+if (process.env.GEMINI_API_KEY && !KEYS.includes(process.env.GEMINI_API_KEY)) {
+  KEYS.push(process.env.GEMINI_API_KEY);
 }
 
 let cursor = 0;
@@ -49,9 +48,8 @@ function buildMessages(feature, text, context) {
 }
 
 async function callKey(key, messages) {
-  const payload = { model: MODEL, messages, max_tokens: 320 };
-  if (!DISALLOWS_TEMPERATURE) payload.temperature = 0.4;
-  const res = await fetch(NVIDIA_URL, {
+  const payload = { model: MODEL, messages, max_tokens: 700, temperature: 0.4 };
+  const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
     body: JSON.stringify(payload)
@@ -73,7 +71,7 @@ module.exports = async function handler(req, res) {
     return;
   }
   if (!KEYS.length) {
-    res.status(503).json({ ok: false, error: 'Chưa cấu hình NVIDIA key trên server: đặt NVIDIA_API_KEY_1..4 trong Vercel.' });
+    res.status(503).json({ ok: false, error: 'Chưa cấu hình Gemini key trên server: đặt GEMINI_API_KEY_1..4 trong Vercel.' });
     return;
   }
   if (!quotaOk()) {
@@ -107,5 +105,5 @@ module.exports = async function handler(req, res) {
     lastErr = 'HTTP ' + out.status;
     if (out.error && !reasons.includes(out.error)) reasons.push(out.error);
   }
-  res.status(502).json({ ok: false, error: 'Toàn bộ key NVIDIA thất bại (' + lastErr + '). Lý do: ' + (reasons.join(' | ') || 'không rõ') + '. Kiểm tra hạn mức hoặc tín dụng của từng key.' });
+  res.status(502).json({ ok: false, error: 'Toàn bộ key Gemini thất bại (' + lastErr + '). Lý do: ' + (reasons.join(' | ') || 'không rõ') + '. Kiểm tra hạn mức hoặc tín dụng của từng key.' });
 };

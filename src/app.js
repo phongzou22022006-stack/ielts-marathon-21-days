@@ -720,7 +720,7 @@ class IELTSMarathonApp {
               <div class="mt-4 p-4 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-muted)]">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-xs font-bold text-[var(--accent-terracotta)]">🤖 AI Phản hồi cá nhân</span>
-                  <span class="font-mono text-[11px] text-[var(--ink-muted)]">DeepSeek V3 (NVIDIA) · vài lượt/ngày</span>
+                  <span class="font-mono text-[11px] text-[var(--ink-muted)]">Gemini 3.6 Flash (Google) · vài lượt/ngày</span>
                 </div>
                 <p class="text-[11px] text-[var(--ink-secondary)] mb-2">Chấm nhanh bản viết của bạn theo tiêu chí thực, chỉ rõ lỗi và mẹo sửa. Nếu mạng lỗi, các bước tự học vẫn hoạt động bình thường.</p>
                 <button onclick="window.app.aiAnalyze('writing')" id="ai-writing-btn" class="btn btn-secondary text-xs w-full py-1.5">
@@ -789,7 +789,7 @@ class IELTSMarathonApp {
               <div class="mt-4 p-4 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-muted)]">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-xs font-bold text-[var(--accent-terracotta)]">🤖 AI Phản hồi cá nhân</span>
-                  <span class="font-mono text-[11px] text-[var(--ink-muted)]">DeepSeek V3 (NVIDIA) · vài lượt/ngày</span>
+                  <span class="font-mono text-[11px] text-[var(--ink-muted)]">Gemini 3.6 Flash (Google) · vài lượt/ngày</span>
                 </div>
                 <p class="text-[11px] text-[var(--ink-secondary)] mb-2">Chấm bản chép lời của bạn: mạch lạc, lỗi nổi bật và mẹo nói tự nhiên hơn.</p>
                 <button onclick="window.app.aiAnalyze('speaking')" id="ai-speaking-btn" class="btn btn-secondary text-xs w-full py-1.5">
