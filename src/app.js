@@ -495,16 +495,22 @@ class IELTSMarathonApp {
     return text.split(/\n\s*\n/).map(p => `<p class="mb-3">${p}</p>`).join('');
   }
 
-  _questionBlockHtml(q, qIdx, activeAnswers) {
+  _questionBlockHtml(q, qIdx, activeAnswers, checkInfo) {
     const options = q.options || [];
+    const checkHtml = checkInfo ? `
+      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${checkInfo.ok ? 'bg-[var(--accent-sage)]/15 text-[var(--accent-sage)]' : 'bg-red-50 text-red-600'} ml-2">${checkInfo.ok ? '✓ Đúng' : '✗ Sai'}</span>
+    ` : '';
     if (options.length === 0) {
+      const isCorrect = checkInfo && checkInfo.ok;
       return `
-        <div class="p-3 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg">
-          <p class="text-xs sm:text-sm font-semibold mb-2 text-[var(--ink-primary)]">${qIdx + 1}. ${q.text}</p>
+        <div class="p-3 bg-[var(--surface)] border ${checkInfo ? (isCorrect ? 'border-[var(--accent-sage)]/50' : 'border-red-200') : 'border-[var(--border-subtle)]'} rounded-lg">
+          <p class="text-xs sm:text-sm font-semibold mb-2 text-[var(--ink-primary)]">${qIdx + 1}. ${q.text}${checkHtml}</p>
           <input type="text" placeholder="Nhập câu trả lời của bạn..." 
                  value="${escapeForAttr(activeAnswers[q.id] || '')}" 
                  onchange="window.app.saveReadingAnswer('${q.id}', this.value)"
-                 class="w-full text-xs p-2 rounded bg-[var(--surface-muted)] border border-[var(--border-subtle)] outline-none focus:border-[var(--accent-terracotta)]">
+                 class="w-full text-xs p-2 rounded bg-[var(--surface-muted)] border ${checkInfo ? (isCorrect ? 'border-[var(--accent-sage)]/50' : 'border-red-300') : 'border-[var(--border-subtle)]'} outline-none focus:border-[var(--accent-terracotta)]">
+          ${checkInfo && !isCorrect ? `<p class="text-[11px] text-[var(--accent-sage)] mt-1.5 font-semibold">Đáp án đúng: <strong>${checkInfo.correct}</strong></p>` : ''}
+          ${checkInfo && checkInfo.explanation ? `<p class="text-[11px] text-[var(--ink-secondary)] mt-1.5 leading-snug">${checkInfo.explanation}</p>` : ''}
         </div>
       `;
     }
@@ -516,18 +522,19 @@ class IELTSMarathonApp {
       </div>
     ` : '';
     return `
-      <div class="p-3 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg">
-        <p class="text-xs sm:text-sm font-semibold mb-2 text-[var(--ink-primary)]">${qIdx + 1}. ${q.text}</p>
+      <div class="p-3 bg-[var(--surface)] border ${checkInfo ? (checkInfo.ok ? 'border-[var(--accent-sage)]/50' : 'border-red-200') : 'border-[var(--border-subtle)]'} rounded-lg">
+        <p class="text-xs sm:text-sm font-semibold mb-2 text-[var(--ink-primary)]">${qIdx + 1}. ${q.text}${checkHtml}</p>
         ${headingsHtml}
         <div class="space-y-1.5">
           ${options.map(opt => `
             <label class="flex items-center gap-2 text-xs text-[var(--ink-secondary)] p-1.5 rounded hover:bg-[var(--surface-muted)] cursor-pointer">
               <input type="radio" name="${q.id}" value="${escapeForAttr(opt[0])}" onchange="window.app.saveReadingAnswer('${q.id}', '${escapeForAttr(opt[0])}')"
                      ${activeAnswers[q.id] === opt[0] ? 'checked' : ''} class="text-[var(--accent-terracotta)]">
-              <span>${opt}</span>
+              <span>${opt}${checkInfo && checkInfo.correct === opt[0] && checkInfo.ok === false ? ' <span class="text-[var(--accent-sage)] font-bold">← đáp án đúng</span>' : ''}</span>
             </label>
           `).join('')}
         </div>
+        ${checkInfo && !checkInfo.ok && checkInfo.explanation ? `<p class="text-[11px] text-[var(--ink-secondary)] mt-1.5 leading-snug">${checkInfo.explanation}</p>` : ''}
       </div>
     `;
   }
@@ -535,7 +542,24 @@ class IELTSMarathonApp {
   _readingModuleHtml(reading, dayProgress) {
     const passages = reading.passages || ([reading.passage].filter(Boolean).map(text => ({ passage: text })));
     if (!passages.length) return '';
-    return passages.map((p, pIdx) => `
+    const wasChecked = !!dayProgress.readingChecked;
+    const checkResult = wasChecked ? this._computeCheck(reading, dayProgress.readingAnswers || {}, 'correct') : null;
+    const allQuestions = (reading.passages || [reading]).flatMap(p => (p.questions || []));
+    return `
+      ${wasChecked ? `
+        <div class="mb-4 p-3 rounded-lg border ${checkResult.correct === checkResult.total ? 'border-[var(--accent-sage)] bg-[var(--accent-sage)]/10' : 'border-[var(--accent-amber)] bg-[var(--accent-amber)]/10'}">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-display font-bold text-sm text-[var(--ink-primary)]">${checkResult.correct === checkResult.total ? '🎯 Hoàn hảo! ' : ''}Kết quả chấm: <span class="text-[var(--accent-terracotta)]">${checkResult.correct}/${checkResult.total} câu đúng</span> (${Math.round(checkResult.correct / checkResult.total * 100)}%)</span>
+            <button onclick="window.app.selfMarkReading()" class="btn btn-secondary text-xs px-2.5 py-1">Chấm lại</button>
+          </div>
+        </div>
+      ` : `
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <span class="text-[11px] text-[var(--ink-secondary)]">Điền xong tất cả đáp án rồi nhấn nút để tự chấm điểm ngay tại trang.</span>
+          <button onclick="window.app.selfMarkReading()" class="btn btn-primary text-xs px-2.5 py-1.5">🧮 Tự chấm điểm</button>
+        </div>
+      `}
+      ${passages.map((p, pIdx) => `
       <div class="mb-4 ${passages.length > 1 ? 'p-3 bg-[var(--surface-muted)] rounded-lg border border-[var(--border-subtle)]' : ''}">
         ${passages.length > 1 ? `
           <div class="flex items-center justify-between mb-2">
@@ -548,10 +572,30 @@ class IELTSMarathonApp {
           ${this._passageHtml(p.passage)}
         </div>
         <div class="space-y-4 mb-5">
-          ${(p.questions || []).map((q, qIdx) => this._questionBlockHtml(q, qIdx, dayProgress.readingAnswers || {})).join('')}
+          ${(p.questions || []).map((q, qIdx) => this._questionBlockHtml(q, qIdx, dayProgress.readingAnswers || {}, wasChecked ? (checkResult.byId[q.id] || null) : null)).join('')}
         </div>
       </div>
-    `).join('');
+    `).join('')}
+    `;
+  }
+
+  _computeCheck(task, answers, keyProp) {
+    const questions = (task.passages || [task]).flatMap(p => (p.questions || []));
+    let correct = 0;
+    const byId = {};
+    for (const q of questions) {
+      const got = this._normalizeAnswer(answers[q.id]);
+      let want = this._normalizeAnswer(q[keyProp]);
+      if (q.options && q.options.length) {
+        q.options.forEach(opt => {
+          if (this._normalizeAnswer(opt[0]) === want) { want = this._normalizeAnswer(opt[0]); }
+        });
+      }
+      const ok = got === want;
+      byId[q.id] = { ok, correct: q[keyProp], explanation: q.explanation || (q[keyProp] ? 'Đáp án đúng: ' + q[keyProp] : '') };
+      if (ok) correct++;
+    }
+    return { correct, total: questions.length, byId };
   }
 
   renderDayDetail() {
@@ -795,16 +839,21 @@ class IELTSMarathonApp {
 
               <!-- Questions -->
               <div class="space-y-3 mb-4">
-                ${dayData.listening.questions.map((lq, lIdx) => `
-                  <div class="p-3 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg text-xs">
-                    <p class="font-semibold mb-2 text-[var(--ink-primary)]">${lIdx + 1}. ${lq.prompt}</p>
+                ${dayData.listening.questions.map((lq, lIdx) => {
+                  const got = this._normalizeAnswer(dayProgress.listeningAnswers?.[lq.id]);
+                  const want = this._normalizeAnswer(lq.answer);
+                  const lCheck = dayProgress.listeningChecked ? { ok: got === want, want: lq.answer } : null;
+                  return `
+                  <div class="p-3 bg-[var(--surface)] border ${lCheck ? (lCheck.ok ? 'border-[var(--accent-sage)]/50' : 'border-red-200') : 'border-[var(--border-subtle)]'} rounded-lg text-xs">
+                    <p class="font-semibold mb-2 text-[var(--ink-primary)]">${lIdx + 1}. ${lq.prompt}${lCheck ? `
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${lCheck.ok ? 'bg-[var(--accent-sage)]/15 text-[var(--accent-sage)]' : 'bg-red-50 text-red-600'} ml-2">${lCheck.ok ? '✓ Đúng' : '✗ Sai'}</span>` : ''}</p>
                     ${lq.options ? `
                       <div class="space-y-1">
                         ${lq.options.map(opt => `
                           <label class="flex items-center gap-2 p-1 rounded hover:bg-[var(--surface-muted)] cursor-pointer">
                             <input type="radio" name="${lq.id}" value="${opt[0]}" onchange="window.app.saveListeningAnswer('${lq.id}', '${opt[0]}')"
                                    ${dayProgress.listeningAnswers?.[lq.id] === opt[0] ? 'checked' : ''} class="text-[var(--accent-sage)]">
-                            <span>${opt}</span>
+                            <span>${opt}${lCheck && !lCheck.ok && lCheck.want === opt[0] ? ' <span class="text-[var(--accent-sage)] font-bold">← đáp án đúng</span>' : ''}</span>
                           </label>
                         `).join('')}
                       </div>
@@ -812,11 +861,34 @@ class IELTSMarathonApp {
                       <input type="text" placeholder="Nhập từ cần điền (tối đa 2 từ)..." 
                              value="${dayProgress.listeningAnswers?.[lq.id] || ''}" 
                              onchange="window.app.saveListeningAnswer('${lq.id}', this.value)"
-                             class="w-full p-2 bg-[var(--surface-muted)] rounded border border-[var(--border-subtle)] outline-none focus:border-[var(--accent-sage)]">
+                             class="w-full p-2 bg-[var(--surface-muted)] rounded border ${lCheck && !lCheck.ok ? 'border-red-300' : 'border-[var(--border-subtle)]'} outline-none focus:border-[var(--accent-sage)]">
                     `}
-                  </div>
-                `).join('')}
+                    ${lCheck && !lCheck.ok ? `<p class="text-[11px] text-[var(--accent-sage)] mt-1.5 font-semibold">Đáp án trong đoạn băng: <strong>${lCheck.want}</strong></p>` : ''}
+                  </div>`;
+                }).join('')}
               </div>
+
+              <!-- Self-check summary -->
+              ${(() => {
+                const questions = dayData.listening.questions || [];
+                const nQ = questions.length;
+                const answered = questions.filter(lq => (dayProgress.listeningAnswers?.[lq.id] ?? '') !== '').length;
+                if (dayProgress.listeningChecked) {
+                  const correct = questions.filter(lq => this._normalizeAnswer(dayProgress.listeningAnswers?.[lq.id]) === this._normalizeAnswer(lq.answer)).length;
+                  return `
+                    <div class="mb-4 p-3 rounded-lg border ${correct === nQ ? 'border-[var(--accent-sage)] bg-[var(--accent-sage)]/10' : 'border-[var(--accent-amber)] bg-[var(--accent-amber)]/10'}">
+                      <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="font-display font-bold text-sm text-[var(--ink-primary)]">${correct === nQ ? '🎯 Hoàn hảo! ' : ''}Kết quả chấm: <span class="text-[var(--accent-sage)]">${correct}/${nQ} câu đúng</span> (${Math.round(correct / nQ * 100)}%)</span>
+                        <button onclick="window.app.selfMarkListening()" class="btn btn-secondary text-xs px-2.5 py-1">Chấm lại</button>
+                      </div>
+                    </div>`;
+                }
+                return `
+                  <div class="mb-4 flex items-center justify-between gap-2">
+                    <span class="text-[11px] text-[var(--ink-secondary)]">Đã trả lời ${answered}/${nQ} câu. Nhấn nút để tự chấm điểm ngay tại trang.</span>
+                    <button onclick="window.app.selfMarkListening()" class="btn btn-primary text-xs px-2.5 py-1.5">🧮 Tự chấm điểm</button>
+                  </div>`;
+              })()}
 
               <!-- Transcript Drawer -->
               <div class="border-t border-[var(--border-subtle)] pt-3">
@@ -1138,7 +1210,24 @@ class IELTSMarathonApp {
     const progress = StorageService.getDayProgress(this.currentDay);
     progress.readingAnswers = progress.readingAnswers || {};
     progress.readingAnswers[qId] = val;
+    if (progress.readingChecked) delete progress.readingChecked;
     StorageService.saveDayProgress(this.currentDay, progress);
+  }
+
+  selfMarkReading() {
+    const dayData = this.curriculum.find(d => d.day === this.currentDay);
+    const questions = (dayData.reading.passages || [dayData.reading]).flatMap(p => (p.questions || []));
+    if (!questions.length) return;
+    const progress = StorageService.getDayProgress(this.currentDay);
+    const answered = questions.filter(q => (progress.readingAnswers?.[q.id] ?? '') !== '').length;
+    if (answered < questions.length) {
+      const missing = questions.length - answered;
+      const ok = confirm(`Còn ${missing} câu chưa trả lời ở Reading. Vẫn chấm điểm phần đã điền?`);
+      if (!ok) return;
+    }
+    progress.readingChecked = true;
+    StorageService.saveDayProgress(this.currentDay, progress);
+    this.render();
   }
 
   saveReadingEvidence() {
@@ -1190,7 +1279,24 @@ class IELTSMarathonApp {
     const progress = StorageService.getDayProgress(this.currentDay);
     progress.listeningAnswers = progress.listeningAnswers || {};
     progress.listeningAnswers[qId] = val;
+    if (progress.listeningChecked) delete progress.listeningChecked;
     StorageService.saveDayProgress(this.currentDay, progress);
+  }
+
+  selfMarkListening() {
+    const dayData = this.curriculum.find(d => d.day === this.currentDay);
+    const questions = dayData.listening.questions || [];
+    if (!questions.length) return;
+    const progress = StorageService.getDayProgress(this.currentDay);
+    const answered = questions.filter(q => (progress.listeningAnswers?.[q.id] ?? '') !== '').length;
+    if (answered < questions.length) {
+      const missing = questions.length - answered;
+      const ok = confirm(`Còn ${missing} câu chưa trả lời ở Listening. Vẫn chấm điểm phần đã điền?`);
+      if (!ok) return;
+    }
+    progress.listeningChecked = true;
+    StorageService.saveDayProgress(this.currentDay, progress);
+    this.render();
   }
 
   toggleTranscript() {
@@ -1382,7 +1488,7 @@ class IELTSMarathonApp {
             <div>
               <span class="badge badge-terracotta font-mono mb-2">NHẬT KÝ LỖI HỌC TẬP</span>
               <h1 class="font-display text-2xl font-bold text-[var(--ink-primary)]">Personal Error Map</h1>
-              <p class="text-xs sm:text-sm text-[var(--ink-secondary)]">Tổng hợp lỗi được ghi nhận xuyên suốt 21 ngày. Các lỗi lặp lại ≥ 2 lần sẽ được ưu tiên rèn luyện ở Ngày 18.</p>
+              <p class="text-xs sm:text-sm text-[var(--ink-secondary)]">Tổng hợp lỗi được ghi nhận xuyên suốt ${this.totalDays} ngày. Các lỗi lặp lại ≥ 2 lần sẽ được ưu tiên rèn luyện vào ngày cuối của giai đoạn 3.</p>
             </div>
             <div class="flex gap-2">
               ${['all', 'Reading', 'Listening', 'Writing', 'Speaking'].map(skill => `
@@ -1513,9 +1619,79 @@ class IELTSMarathonApp {
     a.click();
   }
 
+  _normalizeAnswer(v) {
+    return String(v || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.;:,]/g, '').replace(/\./g, '').replace(/^0+/, '');
+  }
+
+  _readAccuracy(upToDay) {
+    let done = 0, correct = 0;
+    for (let d = 1; d <= upToDay; d++) {
+      const dayData = this.curriculum.find(x => x.day === d);
+      if (!dayData || !dayData.reading) continue;
+      const p = StorageService.getDayProgress(d);
+      const answers = p.readingAnswers || {};
+      (dayData.reading.questions || []).forEach(q => {
+        if (answers[q.id] === undefined || answers[q.id] === null || answers[q.id] === '') return;
+        done++;
+        if (this._normalizeAnswer(answers[q.id]) === this._normalizeAnswer(q.correct)) correct++;
+      });
+    }
+    return done ? { pct: Math.round((correct / done) * 100), done, correct } : null;
+  }
+
+  _listeningAccuracy(upToDay) {
+    let done = 0, correct = 0;
+    for (let d = 1; d <= upToDay; d++) {
+      const dayData = this.curriculum.find(x => x.day === d);
+      if (!dayData || !dayData.listening) continue;
+      const p = StorageService.getDayProgress(d);
+      const answers = p.listeningAnswers || {};
+      (dayData.listening.questions || []).forEach(q => {
+        if (answers[q.id] === undefined || answers[q.id] === null || answers[q.id] === '') return;
+        done++;
+        if (this._normalizeAnswer(answers[q.id]) === this._normalizeAnswer(q.answer)) correct++;
+      });
+    }
+    return done ? { pct: Math.round((correct / done) * 100), done, correct } : null;
+  }
+
   renderCheckpoint(cpDay) {
     const milestone = this.trackMeta.milestones.find(m => m.day === cpDay);
     const cpTitle = milestone ? milestone.label : `Đánh giá mốc kiểm soát Ngày ${cpDay}`;
+
+    const rStat = this._readAccuracy(cpDay);
+    const lStat = this._listeningAccuracy(cpDay);
+    const wStat = (() => {
+      let done = 0, rewrites = 0;
+      for (let d = 1; d <= cpDay; d++) {
+        const dayData = this.curriculum.find(x => x.day === d);
+        if (!dayData || !dayData.writing) continue;
+        done++;
+        const p = StorageService.getDayProgress(d);
+        if (p.writingRewrite) rewrites++;
+      }
+      return done ? { pct: rewrites, done } : null;
+    })();
+    const sStat = (() => {
+      let done = 0, recorded = 0;
+      for (let d = 1; d <= cpDay; d++) {
+        const dayData = this.curriculum.find(x => x.day === d);
+        if (!dayData || !dayData.speaking) continue;
+        done++;
+        if (StorageService.getDayProgress(d).speakingTranscript) recorded++;
+      }
+      return done ? { pct: recorded, done } : null;
+    })();
+
+    const statCard = (label, tone, value, delta) => `
+      <div class="editorial-card p-4">
+        <span class="text-xs text-[var(--ink-secondary)] block mb-1">${label}</span>
+        <div class="flex items-baseline justify-between gap-2">
+          <span class="font-display text-xl font-bold text-[var(--${tone})]">${value}</span>
+          <span class="text-xs text-[var(--accent-sage)] text-right">${delta}</span>
+        </div>
+      </div>
+    `;
 
     return `
       <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
@@ -1529,43 +1705,19 @@ class IELTSMarathonApp {
             </div>
           </div>
           <h1 class="font-display text-2xl font-bold text-[var(--ink-primary)] mb-1">${cpTitle}</h1>
-          <p class="text-xs sm:text-sm text-[var(--ink-secondary)]">So sánh sản phẩm học tập đầu kỳ và hiện tại. Đo lường xu hướng giảm số lỗi theo thời gian.</p>
+          <p class="text-xs sm:text-sm text-[var(--ink-secondary)]">Số liệu dưới đây được tính trực tiếp từ bài làm thật của bạn trong ${cpDay} ngày qua.</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div class="editorial-card p-4">
-            <span class="text-xs text-[var(--ink-secondary)] block mb-1">Độ chính xác Reading</span>
-            <div class="flex items-baseline justify-between">
-              <span class="font-display text-xl font-bold text-[var(--accent-terracotta)]">72%</span>
-              <span class="text-xs text-[var(--accent-sage)]">↑ +18% so với Ngày 1</span>
-            </div>
-          </div>
-          <div class="editorial-card p-4">
-            <span class="text-xs text-[var(--ink-secondary)] block mb-1">Độ nhạy Listening</span>
-            <div class="flex items-baseline justify-between">
-              <span class="font-display text-xl font-bold text-[var(--accent-sage)]">68%</span>
-              <span class="text-xs text-[var(--accent-sage)]">↑ Giảm 50% lỗi âm cuối</span>
-            </div>
-          </div>
-          <div class="editorial-card p-4">
-            <span class="text-xs text-[var(--ink-secondary)] block mb-1">Mạch lạc Writing</span>
-            <div class="flex items-baseline justify-between">
-              <span class="font-display text-xl font-bold text-[var(--accent-amber)]">7.0</span>
-              <span class="text-xs text-[var(--accent-sage)]">Không còn run-on sentence</span>
-            </div>
-          </div>
-          <div class="editorial-card p-4">
-            <span class="text-xs text-[var(--ink-secondary)] block mb-1">Độ trôi chảy Speaking</span>
-            <div class="flex items-baseline justify-between">
-              <span class="font-display text-xl font-bold text-[var(--ink-primary)]">125 wpm</span>
-              <span class="text-xs text-[var(--accent-sage)]">Giảm ngập ngừng 40%</span>
-            </div>
-          </div>
+          ${statCard('Độ chính xác Reading', 'accent-terracotta', rStat ? rStat.pct + '%' : '—', rStat ? rStat.correct + '/' + rStat.done + ' câu đúng' : 'Chưa có bài Reading')}
+          ${statCard('Độ chính xác Listening', 'accent-sage', lStat ? lStat.pct + '%' : '—', lStat ? lStat.correct + '/' + lStat.done + ' câu đúng' : 'Chưa có bài Listening')}
+          ${statCard('Hoàn thành Writing · Rewrite', 'accent-amber', wStat ? wStat.pct + '/' + wStat.done + ' bài' : '—', wStat ? (wStat.pct === wStat.done ? 'Đủ rewrite theo lộ trình' : 'Còn ' + (wStat.done - wStat.pct) + ' bài thiếu rewrite') : 'Chưa có bài Writing')}
+          ${statCard('Hoàn thành Speaking · Ghi âm', 'accent-terracotta', sStat ? sStat.pct + '/' + sStat.done + ' bài' : '—', sStat ? (sStat.pct === sStat.done ? 'Đủ ghi âm theo lộ trình' : 'Còn ' + (sStat.done - sStat.pct) + ' bài chưa ghi âm') : 'Chưa có bài Speaking')}
         </div>
 
         <div class="editorial-card p-6 mb-6">
           <h3 class="font-display text-base font-bold text-[var(--ink-primary)] mb-3">
-            Biểu đồ Xu hướng Giảm Lỗi qua 3 Giai đoạn
+            Biểu đồ Xu hướng Giảm Lỗi qua ${this.trackMeta.phases.length} Giai đoạn
           </h3>
           <div class="p-4 bg-[var(--surface-muted)] rounded-lg border border-[var(--border-subtle)]">
             <svg viewBox="0 0 500 160" class="w-full h-40">
@@ -1671,12 +1823,12 @@ renderMockTest() {
     return `
       <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
         <div class="editorial-card p-8 mb-6 text-center">
-          <span class="badge badge-sage font-mono mb-3">HOÀN THÀNH CHẶNG ĐƯỜNG 21 NGÀY</span>
+          <span class="badge badge-sage font-mono mb-3">HOÀN THÀNH CHẶNG ĐƯỜNG ${this.totalDays} NGÀY</span>
           <h1 class="font-display text-3xl font-extrabold text-[var(--ink-primary)] mb-3">
             Chúc mừng bạn đã hoàn thành IELTS Marathon!
           </h1>
           <p class="text-sm text-[var(--ink-secondary)] max-w-xl mx-auto mb-6">
-            Bạn đã đi hết 21 ngày với tinh thần trung thực: lưu giữ bản đầu tiên, lập luận dựa trên bằng chứng và liên tục hoàn thiện qua các bản rewrite.
+            Bạn đã đi hết ${this.totalDays} ngày với tinh thần trung thực: lưu giữ bản đầu tiên, lập luận dựa trên bằng chứng và liên tục hoàn thiện qua các bản rewrite.
           </p>
           <div class="flex justify-center gap-3">
             <button onclick="window.app.downloadPortfolioJson()" class="btn btn-primary text-sm px-5 py-2.5">
