@@ -54,17 +54,24 @@
           </div>
         </div>
 
-        <nav class="hidden md:flex items-center gap-1 ml-4 pl-4 border-l border-[var(--border-subtle)] text-xs font-semibold">
+<nav class="hidden md:flex items-center gap-1 ml-4 pl-4 border-l border-[var(--border-subtle)] text-xs font-semibold">
           <button data-nav="dashboard" class="btn btn-ghost text-xs px-2.5 py-1.5">🗺️ Lộ trình</button>
           <button data-nav="day-detail" class="btn btn-ghost text-xs px-2.5 py-1.5">📖 Ngày học</button>
           <button data-nav="error-log" class="btn btn-ghost text-xs px-2.5 py-1.5">🎯 Nhật ký lỗi</button>
           <button data-nav="portfolio" class="btn btn-ghost text-xs px-2.5 py-1.5">📁 Hồ sơ Portfolio</button>
           <button data-nav="checkpoint" class="btn btn-ghost text-xs px-2.5 py-1.5">⭐ Checkpoints</button>
-          <button data-nav="mock-test" class="btn btn-ghost text-xs px-2.5 py-1.5 text-[var(--accent-terracotta)]">🎯 Thi thử Ngày 20</button>
+          <button data-nav="mock-test" id="nav-mock-test" class="btn btn-ghost text-xs px-2.5 py-1.5 text-[var(--accent-terracotta)]">🎯 Thi thử Ngày 20</button>
         </nav>
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Track Switcher -->
+        <select id="track-select" onchange="window.app.setTrack(this.value)"
+                class="hidden sm:block text-xs bg-[var(--surface-muted)] px-2 py-1.5 rounded-lg border border-[var(--border-subtle)] font-mono font-bold text-[var(--accent-terracotta)] outline-none cursor-pointer">
+          <option value="ielts21">21 Ngày</option>
+          <option value="foundation14">Nền tảng 14</option>
+        </select>
+
         <!-- Floating Timer Pill -->
         <div class="timer-pill text-xs py-1 px-2.5 sm:px-3.5 cursor-pointer select-none" 
              onclick="window.app.timerRunning ? window.app.pauseTimer() : window.app.startTimer()" 

@@ -1,7 +1,10 @@
-﻿// IELTS Marathon 21 Days - Client Storage Service
+﻿// IELTS Marathon - Client Storage Service
 // Powered by LocalStorage + IndexedDB for reliable offline persistence
+// Multi-track: mỗi track lưu riêng currentDay / rhythm / progress với key namespaced.
+// Track ielts21 giữ các key legacy để không làm mất dữ liệu cũ.
 
 const STORAGE_KEYS = {
+  TRACK: 'ielts_marathon_track',
   USER_PROFILE: 'ielts_marathon_user',
   CURRENT_DAY: 'ielts_marathon_current_day',
   RHYTHM: 'ielts_marathon_rhythm',
@@ -13,6 +16,17 @@ const STORAGE_KEYS = {
   STREAK: 'ielts_marathon_streak',
   CHECKPOINTS: 'ielts_marathon_checkpoints'
 };
+
+const DEFAULT_RHYTHM = {
+  ielts21: 90,
+  foundation14: 45
+};
+
+// Track ielts21 giữ key legacy; các track khác dùng prefix riêng.
+function keyFor(baseKey, track) {
+  if (track === 'ielts21') return baseKey;
+  return `${baseKey}_${track}`;
+}
 
 // --- IndexedDB for Audio Blobs ---
 const DB_NAME = 'IELTSMarathonAudioDB';
@@ -39,6 +53,15 @@ function openAudioDB() {
 }
 
 export const StorageService = {
+  // Track settings
+  getTrack() {
+    const stored = localStorage.getItem(STORAGE_KEYS.TRACK);
+    return stored || 'ielts21';
+  },
+  setTrack(track) {
+    localStorage.setItem(STORAGE_KEYS.TRACK, track);
+  },
+
   // User & Settings
   getUser() {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.USER_PROFILE)) || {
@@ -52,18 +75,22 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(user));
   },
 
-  getCurrentDay() {
-    return parseInt(localStorage.getItem(STORAGE_KEYS.CURRENT_DAY) || '1', 10);
+  getCurrentDay(track) {
+    const t = track || this.getTrack();
+    return parseInt(localStorage.getItem(keyFor(STORAGE_KEYS.CURRENT_DAY, t)) || '1', 10);
   },
-  setCurrentDay(day) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_DAY, day.toString());
+  setCurrentDay(day, track) {
+    const t = track || this.getTrack();
+    localStorage.setItem(keyFor(STORAGE_KEYS.CURRENT_DAY, t), day.toString());
   },
 
-  getRhythm() {
-    return parseInt(localStorage.getItem(STORAGE_KEYS.RHYTHM) || '90', 10);
+  getRhythm(track) {
+    const t = track || this.getTrack();
+    return parseInt(localStorage.getItem(keyFor(STORAGE_KEYS.RHYTHM, t)) || String(DEFAULT_RHYTHM[t] || 90), 10);
   },
-  setRhythm(rhythm) {
-    localStorage.setItem(STORAGE_KEYS.RHYTHM, rhythm.toString());
+  setRhythm(rhythm, track) {
+    const t = track || this.getTrack();
+    localStorage.setItem(keyFor(STORAGE_KEYS.RHYTHM, t), rhythm.toString());
   },
 
   getTheme() {
@@ -85,12 +112,14 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.SKILL_LEVELS, JSON.stringify(levels));
   },
 
-  // Daily Progress
-  getAllProgress() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.PROGRESS)) || {};
+  // Daily Progress (namespaced per track; ielts21 keep legacy key)
+  getAllProgress(track) {
+    const t = track || this.getTrack();
+    return JSON.parse(localStorage.getItem(keyFor(STORAGE_KEYS.PROGRESS, t))) || {};
   },
-  getDayProgress(day) {
-    const all = this.getAllProgress();
+  getDayProgress(day, track) {
+    const t = track || this.getTrack();
+    const all = this.getAllProgress(t);
     return all[day] || {
       completedModules: [],
       readingEvidence: { locator: '', paraphrase: '', errorReason: '' },
@@ -110,13 +139,14 @@ export const StorageService = {
       checklistCompleted: []
     };
   },
-  saveDayProgress(day, dayData) {
-    const all = this.getAllProgress();
+  saveDayProgress(day, dayData, track) {
+    const t = track || this.getTrack();
+    const all = this.getAllProgress(t);
     all[day] = { ...all[day], ...dayData, lastUpdated: new Date().toISOString() };
-    localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(all));
+    localStorage.setItem(keyFor(STORAGE_KEYS.PROGRESS, t), JSON.stringify(all));
   },
 
-  // Error Log
+  // Error Log (global across tracks)
   getErrorLog() {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.ERROR_LOG)) || [
       { id: 'err-1', day: 1, skill: 'Listening', description: 'Bỏ quên âm đuôi -s trong danh từ số nhiều (participants)', errorType: 'Mất âm cuối', frequency: 2, recurring: true, date: '2026-09-10' },
@@ -172,14 +202,16 @@ export const StorageService = {
     });
   },
 
-  // Export full portfolio
-  exportFullPortfolio() {
-    const progress = this.getAllProgress();
+  // Export full portfolio (cho track đang hoạt động)
+  exportFullPortfolio(track) {
+    const t = track || this.getTrack();
+    const progress = this.getAllProgress(t);
     const errorLog = this.getErrorLog();
     const user = this.getUser();
     return {
       version: '1.0',
       exportedAt: new Date().toISOString(),
+      track: t,
       user,
       progress,
       errorLog

@@ -1,18 +1,31 @@
-// IELTS Marathon 21 Days - Complete Client Application
-import { CURRICULUM_DATA } from './data/curriculumData.js';
+// IELTS Marathon - Complete Client Application (Multi-Track)
+import { CURRICULUM_DATA, TRACKS, FOUNDATION_14_DAYS } from './data/curriculumData.js';
 import { RHYTHM_CONFIGS } from './data/rhythmConfig.js';
 import { StorageService } from './services/storageService.js';
 import { AudioRecorderEngine } from './services/audioRecorder.js';
 
+const DATA_SETS = {
+  ielts21: CURRICULUM_DATA,
+  foundation14: FOUNDATION_14_DAYS
+};
+
+function escapeForAttr(val) {
+  return String(val).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 class IELTSMarathonApp {
   constructor() {
-    this.curriculum = CURRICULUM_DATA;
-    this.currentDay = StorageService.getCurrentDay();
-    this.rhythm = StorageService.getRhythm();
+    this.track = StorageService.getTrack();
+    if (!DATA_SETS[this.track]) this.track = 'ielts21';
+    this.trackMeta = TRACKS[this.track];
+    this.curriculum = DATA_SETS[this.track] || CURRICULUM_DATA;
+    this.totalDays = this.curriculum.length;
+    this.currentDay = Math.min(Math.max(StorageService.getCurrentDay(this.track), 1), this.totalDays);
+    this.rhythm = StorageService.getRhythm(this.track);
     this.theme = StorageService.getTheme();
     this.skillLevels = StorageService.getSkillLevels();
     this.currentView = 'day-detail';
-    this.checkpointDay = 7;
+    this.checkpointDay = this.trackMeta.checkpoints[0] || 7;
     this.timerSeconds = this.rhythm * 60;
     this.timerRunning = false;
     this.timerInterval = null;
@@ -27,7 +40,43 @@ class IELTSMarathonApp {
     this.bindEvents();
     this.render();
     this.initKeyboardShortcuts();
-    console.log('IELTS Marathon App loaded.');
+    console.log('IELTS Marathon App loaded. Track:', this.track);
+  }
+
+  setTrack(track) {
+    if (!DATA_SETS[track] || track === this.track) return;
+    this.track = track;
+    StorageService.setTrack(track);
+    this.trackMeta = TRACKS[track];
+    this.curriculum = DATA_SETS[track];
+    this.totalDays = this.curriculum.length;
+    this.currentDay = 1;
+    StorageService.setCurrentDay(1, track);
+    if (!this.trackMeta.rhythms.includes(this.rhythm)) {
+      this.rhythm = this.trackMeta.defaultRhythm;
+      StorageService.setRhythm(this.rhythm, track);
+    }
+    this.timerSeconds = this.rhythm * 60;
+    this.pauseTimer();
+    this.checkpointDay = this.trackMeta.checkpoints[0] || 7;
+    this.currentView = 'dashboard';
+    const sel = document.getElementById('track-select');
+    if (sel) sel.value = track;
+    this.render();
+  }
+
+  syncHeader() {
+    const sel = document.getElementById('track-select');
+    if (sel) sel.value = this.track;
+    const mockNav = document.getElementById('nav-mock-test');
+    if (mockNav) {
+      if (this.trackMeta.mockTestDay) {
+        mockNav.style.display = '';
+        mockNav.textContent = '🎯 Thi thử Ngày ' + this.trackMeta.mockTestDay;
+      } else {
+        mockNav.style.display = 'none';
+      }
+    }
   }
 
   applyTheme(theme) {
@@ -61,8 +110,8 @@ class IELTSMarathonApp {
   navigateTo(view, extra = {}) {
     this.currentView = view;
     if (extra.day) {
-      this.currentDay = extra.day;
-      StorageService.setCurrentDay(this.currentDay);
+      this.currentDay = Math.min(Math.max(extra.day, 1), this.totalDays);
+      StorageService.setCurrentDay(this.currentDay, this.track);
     }
     if (extra.checkpoint) this.checkpointDay = extra.checkpoint;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -70,15 +119,15 @@ class IELTSMarathonApp {
   }
 
   setDay(day) {
-    if (day < 1 || day > 21) return;
+    if (day < 1 || day > this.totalDays) return;
     this.currentDay = day;
-    StorageService.setCurrentDay(day);
+    StorageService.setCurrentDay(day, this.track);
     this.render();
   }
 
   setRhythm(rhythm) {
     this.rhythm = parseInt(rhythm, 10);
-    StorageService.setRhythm(this.rhythm);
+    StorageService.setRhythm(this.rhythm, this.track);
     this.timerSeconds = this.rhythm * 60;
     this.render();
   }
@@ -162,26 +211,23 @@ class IELTSMarathonApp {
     else if (this.currentView === 'final-audit') root.innerHTML = this.renderFinalAudit();
     else if (this.currentView === 'settings') root.innerHTML = this.renderSettings();
     else root.innerHTML = this.renderDayDetail();
-
-    this.postRender();
-  }
-
-  postRender() {
+    this.syncHeader();
     this.updateTimerDisplay();
     this.bindDayDetailEvents();
   }
 
   renderDashboard() {
     const user = StorageService.getUser();
-    const allProgress = StorageService.getAllProgress();
+    const allProgress = StorageService.getAllProgress(this.track);
     const completedDays = Object.keys(allProgress).length;
-    const progressPercent = Math.round((completedDays / 21) * 100);
+    const totalN = this.totalDays;
+    const progressPercent = Math.round((completedDays / totalN) * 100);
 
     let phasesHtml = '';
-    [1, 2, 3].forEach(phaseNum => {
-      const phaseDays = this.curriculum.filter(d => d.phase === phaseNum);
-      const phaseTitle = phaseNum === 1 ? 'Giai đoạn 1: Reset & Repair (Ngày 1 - 7)' : phaseNum === 2 ? 'Giai đoạn 2: Phát triển Ý & Áp lực (Ngày 8 - 14)' : 'Giai đoạn 3: Bấm giờ & Kiểm định (Ngày 15 - 21)';
-      const phaseDesc = phaseNum === 1 ? 'Xác định điểm xuất phát, đọc dựa trên bằng chứng, viết câu rõ, ghi âm trung thực.' : phaseNum === 2 ? 'Mở rộng ý, hiểu chức năng đoạn, kiểm soát ngôn ngữ dưới áp lực vừa phải.' : 'Làm bài bấm giờ, ưu tiên khắc phục lỗi lặp lại, đánh giá thay đổi đầu-cuối.';
+    this.trackMeta.phases.forEach(phaseMeta => {
+      const phaseDays = this.curriculum.filter(d => d.phase === phaseMeta.number);
+      const phaseTitle = `Giai đoạn ${phaseMeta.number}: ${phaseMeta.title} (${phaseMeta.range})`;
+      const phaseDesc = phaseMeta.desc;
 
       let daysCards = '';
       phaseDays.forEach(dayItem => {
@@ -221,15 +267,14 @@ class IELTSMarathonApp {
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <div class="flex items-center gap-2 mb-2">
-                <span class="badge badge-terracotta font-mono">LỘ TRÌNH 21 NGÀY</span>
+                <span class="badge ${this.trackMeta.badgeClass} font-mono">${this.trackMeta.label.toUpperCase()}</span>
                 <span class="badge badge-sage font-mono">🔥 Streak: ${user.streak} ngày</span>
               </div>
               <h1 class="font-display text-2xl sm:text-3xl font-extrabold text-[var(--ink-primary)] mb-2">
                 IELTS Marathon: Tự học Có kiểm soát
               </h1>
               <p class="text-sm sm:text-base text-[var(--ink-secondary)] max-w-2xl">
-                Chuyển thể từ tài liệu "IELTS Marathon 21-Day Companion" với Module Listening chuẩn hoá 21 ngày. 
-                Giữ vững nguyên tắc: Bằng chứng xác thực, bản đầu bất biến và sửa lỗi có chiều sâu.
+                ${this.trackMeta.description}
               </p>
             </div>
             <div>
@@ -242,7 +287,7 @@ class IELTSMarathonApp {
 
           <div class="mt-6 pt-6 border-t border-[var(--border-subtle)]">
             <div class="flex justify-between text-xs font-semibold mb-2">
-              <span class="text-[var(--ink-secondary)]">Tiến độ tổng thể: ${completedDays}/21 Ngày</span>
+              <span class="text-[var(--ink-secondary)]">Tiến độ tổng thể: ${completedDays}/${totalN} Ngày</span>
               <span class="font-mono text-[var(--accent-terracotta)]">${progressPercent}%</span>
             </div>
             <div class="w-full bg-[var(--surface-muted)] rounded-full h-2.5 overflow-hidden border border-[var(--border-subtle)]">
@@ -253,6 +298,69 @@ class IELTSMarathonApp {
         ${phasesHtml}
       </div>
     `;
+  }
+
+  _passageHtml(text) {
+    return text.split(/\n\s*\n/).map(p => `<p class="mb-3">${p}</p>`).join('');
+  }
+
+  _questionBlockHtml(q, qIdx, activeAnswers) {
+    const options = q.options || [];
+    if (options.length === 0) {
+      return `
+        <div class="p-3 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg">
+          <p class="text-xs sm:text-sm font-semibold mb-2 text-[var(--ink-primary)]">${qIdx + 1}. ${q.text}</p>
+          <input type="text" placeholder="Nhập câu trả lời của bạn..." 
+                 value="${escapeForAttr(activeAnswers[q.id] || '')}" 
+                 onchange="window.app.saveReadingAnswer('${q.id}', this.value)"
+                 class="w-full text-xs p-2 rounded bg-[var(--surface-muted)] border border-[var(--border-subtle)] outline-none focus:border-[var(--accent-terracotta)]">
+        </div>
+      `;
+    }
+    const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+    const headingsHtml = q.headings && q.headings.length ? `
+      <div class="mb-2 p-2 bg-[var(--surface-muted)] rounded text-[11px] text-[var(--ink-secondary)] border border-[var(--border-subtle)]">
+        <strong class="block mb-1">Danh sách tiêu đề:</strong>
+        ${q.headings.map((h, i) => `<span class="block">${roman[i] || (i + 1)}. ${h}</span>`).join('')}
+      </div>
+    ` : '';
+    return `
+      <div class="p-3 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg">
+        <p class="text-xs sm:text-sm font-semibold mb-2 text-[var(--ink-primary)]">${qIdx + 1}. ${q.text}</p>
+        ${headingsHtml}
+        <div class="space-y-1.5">
+          ${options.map(opt => `
+            <label class="flex items-center gap-2 text-xs text-[var(--ink-secondary)] p-1.5 rounded hover:bg-[var(--surface-muted)] cursor-pointer">
+              <input type="radio" name="${q.id}" value="${escapeForAttr(opt[0])}" onchange="window.app.saveReadingAnswer('${q.id}', '${escapeForAttr(opt[0])}')"
+                     ${activeAnswers[q.id] === opt[0] ? 'checked' : ''} class="text-[var(--accent-terracotta)]">
+              <span>${opt}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  _readingModuleHtml(reading, dayProgress) {
+    const passages = reading.passages || ([reading.passage].filter(Boolean).map(text => ({ passage: text })));
+    if (!passages.length) return '';
+    return passages.map((p, pIdx) => `
+      <div class="mb-4 ${passages.length > 1 ? 'p-3 bg-[var(--surface-muted)] rounded-lg border border-[var(--border-subtle)]' : ''}">
+        ${passages.length > 1 ? `
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-display text-xs font-bold text-[var(--accent-terracotta)] uppercase tracking-wider">Bài đọc ${pIdx + 1}</h4>
+          </div>
+          <p class="text-sm font-bold text-[var(--ink-primary)] mb-1">${p.title || ''}</p>
+          ${p.strategy ? `<p class="text-xs text-[var(--ink-secondary)] mb-3">${p.strategy}</p>` : ''}
+        ` : ''}
+        <div class="p-4 bg-[var(--surface-muted)] rounded-lg text-xs sm:text-sm font-editorial leading-relaxed max-h-64 overflow-y-auto mb-4 border border-[var(--border-subtle)]">
+          ${this._passageHtml(p.passage)}
+        </div>
+        <div class="space-y-4 mb-5">
+          ${(p.questions || []).map((q, qIdx) => this._questionBlockHtml(q, qIdx, dayProgress.readingAnswers || {})).join('')}
+        </div>
+      </div>
+    `).join('');
   }
 
   renderDayDetail() {
@@ -268,7 +376,7 @@ class IELTSMarathonApp {
             <div>
               <div class="flex flex-wrap items-center gap-2 mb-2">
                 <span class="badge badge-terracotta font-mono font-bold">GIAI ĐOẠN ${dayData.phase}</span>
-                <span class="badge badge-muted font-mono">NGÀY ${String(dayData.day).padStart(2, '0')} / 21</span>
+                <span class="badge badge-muted font-mono">NGÀY ${String(dayData.day).padStart(2, '0')} / ${this.totalDays}</span>
                 ${dayData.isCheckpoint ? '<span class="badge badge-amber">⭐ Checkpoint Tuần</span>' : ''}
                 ${dayData.isMockTest ? '<span class="badge badge-terracotta">🎯 Thi thử Tổng hợp</span>' : ''}
               </div>
@@ -286,16 +394,16 @@ class IELTSMarathonApp {
                         class="btn btn-ghost px-2 py-1 text-xs" ${this.currentDay <= 1 ? 'disabled' : ''}>← Trước</button>
                 <span class="font-mono text-xs font-bold px-2">${String(this.currentDay).padStart(2, '0')}</span>
                 <button onclick="window.app.setDay(${this.currentDay + 1})" 
-                        class="btn btn-ghost px-2 py-1 text-xs" ${this.currentDay >= 21 ? 'disabled' : ''}>Sau →</button>
+                        class="btn btn-ghost px-2 py-1 text-xs" ${this.currentDay >= this.totalDays ? 'disabled' : ''}>Sau →</button>
               </div>
 
               <div class="hidden sm:flex items-center gap-2 bg-[var(--surface-muted)] px-3 py-1.5 rounded-lg border border-[var(--border-subtle)]">
                 <span class="text-xs text-[var(--ink-secondary)]">Nhịp học:</span>
                 <select id="day-rhythm-select" onchange="window.app.setRhythm(this.value)" 
                         class="bg-transparent text-xs font-bold text-[var(--accent-terracotta)] font-mono outline-none cursor-pointer">
-                  <option value="60" ${this.rhythm === 60 ? 'selected' : ''}>60 Phút (Rút gọn)</option>
-                  <option value="90" ${this.rhythm === 90 ? 'selected' : ''}>90 Phút (Tiêu chuẩn)</option>
-                  <option value="150" ${this.rhythm === 150 ? 'selected' : ''}>150 Phút (Chuyên sâu)</option>
+                  ${this.trackMeta.rhythms.map(r => `
+                    <option value="${r}" ${this.rhythm === r ? 'selected' : ''}>${r} Phút (${RHYTHM_CONFIGS[r] ? RHYTHM_CONFIGS[r].badge : ''})</option>
+                  `).join('')}
                 </select>
               </div>
             </div>
@@ -316,8 +424,8 @@ class IELTSMarathonApp {
           <div class="hidden lg:block lg:col-span-3 space-y-4">
             <div class="editorial-card p-4 sticky top-20">
               <h3 class="font-display text-sm font-bold text-[var(--ink-primary)] mb-3 flex items-center justify-between">
-                <span>Lộ trình 21 Ngày</span>
-                <span class="font-mono text-xs text-[var(--ink-secondary)]">${dayData.day}/21</span>
+                <span>${this.trackMeta.label}</span>
+                <span class="font-mono text-xs text-[var(--ink-secondary)]">${dayData.day}/${this.totalDays}</span>
               </h3>
               <div class="space-y-1.5 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
                 ${this.curriculum.map(item => `
@@ -380,6 +488,7 @@ class IELTSMarathonApp {
             </section>
 
             <!-- 4. Reading Module -->
+            ${dayData.reading ? `
             <section class="editorial-card p-5 border-l-4 border-l-[var(--accent-terracotta)]">
               <div class="flex items-center justify-between mb-3">
                 <div>
@@ -389,28 +498,7 @@ class IELTSMarathonApp {
                 <span class="badge badge-muted text-xs">Gợi ý: ${rhythmInfo.moduleBudgets.reading}m</span>
               </div>
 
-              <!-- Passage -->
-              <div class="p-4 bg-[var(--surface-muted)] rounded-lg text-xs sm:text-sm font-editorial leading-relaxed max-h-64 overflow-y-auto mb-4 border border-[var(--border-subtle)]">
-                ${dayData.reading.passage.split(/\n\s*\n/).map(p => `<p class="mb-3">${p}</p>`).join('')}
-              </div>
-
-              <!-- Questions -->
-              <div class="space-y-4 mb-5">
-                ${dayData.reading.questions.map((q, qIdx) => `
-                  <div class="p-3 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg">
-                    <p class="text-xs sm:text-sm font-semibold mb-2 text-[var(--ink-primary)]">${qIdx + 1}. ${q.text}</p>
-                    <div class="space-y-1.5">
-                      ${q.options.map(opt => `
-                        <label class="flex items-center gap-2 text-xs text-[var(--ink-secondary)] p-1.5 rounded hover:bg-[var(--surface-muted)] cursor-pointer">
-                          <input type="radio" name="${q.id}" value="${opt[0]}" onchange="window.app.saveReadingAnswer('${q.id}', '${opt[0]}')"
-                                 ${dayProgress.readingAnswers?.[q.id] === opt[0] ? 'checked' : ''} class="text-[var(--accent-terracotta)]">
-                          <span>${opt}</span>
-                        </label>
-                      `).join('')}
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
+              ${this._readingModuleHtml(dayData.reading, dayProgress)}
 
               <!-- Evidence Logger -->
               <div class="p-4 bg-[var(--surface-muted)] rounded-lg border border-[var(--border-subtle)]">
@@ -442,8 +530,10 @@ class IELTSMarathonApp {
                 </div>
               </div>
             </section>
+            ` : ''}
 
             <!-- 5. Listening Module (NEW) -->
+            ${dayData.listening ? `
             <section class="editorial-card p-5 border-l-4 border-l-[var(--accent-sage)]">
               <div class="flex items-center justify-between mb-2">
                 <div>
@@ -536,8 +626,10 @@ class IELTSMarathonApp {
                 </div>
               </div>
             </section>
+            ` : ''}
 
             <!-- 6. Writing Module -->
+            ${dayData.writing ? `
             <section class="editorial-card p-5 border-l-4 border-l-[var(--accent-amber)]">
               <div class="flex items-center justify-between mb-2">
                 <div>
@@ -606,8 +698,10 @@ class IELTSMarathonApp {
                 </div>
               ` : ''}
             </section>
+            ` : ''}
 
             <!-- 7. Speaking Module -->
+            ${dayData.speaking ? `
             <section class="editorial-card p-5">
               <div class="flex items-center justify-between mb-2">
                 <div>
@@ -661,8 +755,10 @@ class IELTSMarathonApp {
                 </div>
               </div>
             </section>
+            ` : ''}
 
             <!-- 8. Vocabulary -->
+            ${dayData.vocabulary && dayData.vocabulary.length ? `
             <section class="editorial-card p-5">
               <div class="flex items-center justify-between mb-3">
                 <span class="font-mono text-xs font-bold text-[var(--accent-terracotta)]">08. VOCABULARY PHRASE BANK</span>
@@ -685,8 +781,10 @@ class IELTSMarathonApp {
                 `).join('')}
               </div>
             </section>
+            ` : ''}
 
             <!-- 9. Grammar Drill -->
+            ${dayData.grammar ? `
             <section class="editorial-card p-5">
               <div class="flex items-center justify-between mb-2">
                 <span class="font-mono text-xs font-bold text-[var(--ink-secondary)]">09. GRAMMAR DRILL</span>
@@ -708,8 +806,10 @@ class IELTSMarathonApp {
                 ${dayData.grammar.sampleAnswer}
               </div>
             </section>
+            ` : ''}
 
             <!-- 10. Deliverables List -->
+            ${dayData.deliverables && dayData.deliverables.length ? `
             <section class="editorial-card p-5 bg-[var(--surface-muted)]">
               <div class="flex items-center justify-between mb-2">
                 <span class="font-mono text-xs font-bold text-[var(--ink-primary)]">10. SẢN PHẨM CẦN NỘP CUỐI NGÀY</span>
@@ -725,6 +825,7 @@ class IELTSMarathonApp {
                 `).join('')}
               </ul>
             </section>
+            ` : ''}
 
           </div>
 
@@ -1124,7 +1225,8 @@ class IELTSMarathonApp {
   }
 
   renderCheckpoint(cpDay) {
-    const cpTitle = cpDay === 7 ? 'Checkpoint Tuần 1: Reset & Repair Audit' : cpDay === 14 ? 'Checkpoint Tuần 2: Language Control Under Pressure' : 'Checkpoint Cuối kỳ: End-of-Roadmap Audit';
+    const milestone = this.trackMeta.milestones.find(m => m.day === cpDay);
+    const cpTitle = milestone ? milestone.label : `Đánh giá mốc kiểm soát Ngày ${cpDay}`;
 
     return `
       <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
@@ -1132,9 +1234,9 @@ class IELTSMarathonApp {
           <div class="flex items-center justify-between mb-2">
             <span class="badge badge-amber font-mono">ĐÁNH GIÁ MỐC KIỂM SOÁT</span>
             <div class="flex gap-2">
-              <button onclick="window.app.renderCheckpointWithDay(7)" class="btn ${cpDay === 7 ? 'btn-primary' : 'btn-secondary'} text-xs px-2.5 py-1">Ngày 7</button>
-              <button onclick="window.app.renderCheckpointWithDay(14)" class="btn ${cpDay === 14 ? 'btn-primary' : 'btn-secondary'} text-xs px-2.5 py-1">Ngày 14</button>
-              <button onclick="window.app.renderCheckpointWithDay(21)" class="btn ${cpDay === 21 ? 'btn-primary' : 'btn-secondary'} text-xs px-2.5 py-1">Ngày 21</button>
+              ${this.trackMeta.checkpoints.map(c => `
+                <button onclick="window.app.renderCheckpointWithDay(${c})" class="btn ${cpDay === c ? 'btn-primary' : 'btn-secondary'} text-xs px-2.5 py-1">Ngày ${c}</button>
+              `).join('')}
             </div>
           </div>
           <h1 class="font-display text-2xl font-bold text-[var(--ink-primary)] mb-1">${cpTitle}</h1>
@@ -1183,10 +1285,10 @@ class IELTSMarathonApp {
               <line x1="40" y1="120" x2="480" y2="120" stroke="var(--border-subtle)" stroke-dasharray="3,3" />
               <polyline fill="none" stroke="var(--accent-terracotta)" stroke-width="3" points="60,110 180,80 320,50 450,30" />
               <polyline fill="none" stroke="var(--accent-sage)" stroke-width="3" points="60,125 180,95 320,65 450,35" />
-              <text x="60" y="145" font-size="10" fill="var(--ink-secondary)" text-anchor="middle">Ngày 1</text>
-              <text x="180" y="145" font-size="10" fill="var(--ink-secondary)" text-anchor="middle">Ngày 7</text>
-              <text x="320" y="145" font-size="10" fill="var(--ink-secondary)" text-anchor="middle">Ngày 14</text>
-              <text x="450" y="145" font-size="10" fill="var(--ink-secondary)" text-anchor="middle">Ngày 21</text>
+              ${this.trackMeta.checkpoints.map((c, idx) => `
+                <text x="${60 + idx * 130}" y="145" font-size="10" fill="var(--ink-secondary)" text-anchor="middle">Ngày ${c}</text>
+              `).join('')}
+              <text x="450" y="145" font-size="10" fill="var(--ink-secondary)" text-anchor="middle">${this.totalDays === 21 ? 'Ngày 21' : 'Cuối lộ trình'}</text>
             </svg>
             <div class="flex justify-center gap-6 text-xs mt-2">
               <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[var(--accent-terracotta)] inline-block"></span> Lỗi Reading</span>
@@ -1203,13 +1305,32 @@ class IELTSMarathonApp {
     this.render();
   }
 
-  renderMockTest() {
+renderMockTest() {
+    if (!this.trackMeta.mockTestDay) {
+      return `
+        <div class="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
+          <div class="editorial-card p-8 text-center">
+            <span class="badge badge-muted font-mono mb-3">MÔ PHỎNG PHÒNG THI</span>
+            <h1 class="font-display text-2xl font-bold text-[var(--ink-primary)] mb-3">
+              Lộ trình ${this.trackMeta.label} không có bài thi thử tổng hợp
+            </h1>
+            <p class="text-sm text-[var(--ink-secondary)] mb-6">
+              Bài kiểm tra cuối của lộ trình này được thiết kế dưới dạng Bài kiểm tra cuối (Ngày ${this.totalDays}) với câu hỏi tổng hợp 4 kỹ năng. Hãy chuyển sang Lộ trình 21 Ngày nếu bạn muốn trải nghiệm Full Mock Test 4 kỹ năng có bấm giờ.
+            </p>
+            <button onclick="window.app.navigateTo('day-detail', { day: ${this.totalDays} })" class="btn btn-primary text-sm px-5 py-2.5">
+              Mở Bài kiểm tra cuối Ngày ${this.totalDays}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    const mockDay = this.trackMeta.mockTestDay;
     return `
       <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
         <div class="editorial-card p-6 mb-6 border-l-4 border-l-[var(--accent-terracotta)]">
           <span class="badge badge-terracotta font-mono mb-2">MÔ PHỎNG PHÒNG THI CHUẨN ACADEMIC</span>
           <h1 class="font-display text-2xl font-bold text-[var(--ink-primary)] mb-2">
-            Ngày 20: Full Mock Test 4 Kỹ Năng có Bấm Giờ
+            Ngày ${mockDay}: Full Mock Test 4 Kỹ Năng có Bấm giờ
           </h1>
           <p class="text-sm text-[var(--ink-secondary)]">
             Làm bài liên tục không gián đoạn trong 165 phút. Kiểm tra khả năng chịu đựng áp lực và độ ổn định của quy trình làm bài.
@@ -1221,7 +1342,7 @@ class IELTSMarathonApp {
             <span class="font-mono text-xs text-[var(--accent-sage)] font-bold block mb-1">SECTION 1 • 30 PHÚT</span>
             <h3 class="font-display text-base font-bold text-[var(--ink-primary)] mb-2">Listening Academic Simulation</h3>
             <p class="text-xs text-[var(--ink-secondary)] mb-4">40 câu hỏi, 4 sections liên tục. Chỉ nghe 1 lần duy nhất chuẩn thi thật.</p>
-            <button onclick="window.app.navigateTo('day-detail', { day: 20 })" class="btn btn-primary text-xs w-full py-2">
+            <button onclick="window.app.navigateTo('day-detail', { day: ${mockDay} })" class="btn btn-primary text-xs w-full py-2">
               Bắt đầu Listening Mock Test
             </button>
           </div>
@@ -1230,7 +1351,7 @@ class IELTSMarathonApp {
             <span class="font-mono text-xs text-[var(--accent-terracotta)] font-bold block mb-1">SECTION 2 • 60 PHÚT</span>
             <h3 class="font-display text-base font-bold text-[var(--ink-primary)] mb-2">Reading Academic Simulation</h3>
             <p class="text-xs text-[var(--ink-secondary)] mb-4">3 bài đọc dài, 40 câu hỏi. Áp dụng kỹ thuật định vị bằng chứng nhanh.</p>
-            <button onclick="window.app.navigateTo('day-detail', { day: 20 })" class="btn btn-primary text-xs w-full py-2">
+            <button onclick="window.app.navigateTo('day-detail', { day: ${mockDay} })" class="btn btn-primary text-xs w-full py-2">
               Bắt đầu Reading Mock Test
             </button>
           </div>
@@ -1239,7 +1360,7 @@ class IELTSMarathonApp {
             <span class="font-mono text-xs text-[var(--accent-amber)] font-bold block mb-1">SECTION 3 • 60 PHÚT</span>
             <h3 class="font-display text-base font-bold text-[var(--ink-primary)] mb-2">Writing Task 1 & Task 2</h3>
             <p class="text-xs text-[var(--ink-secondary)] mb-4">20 phút Task 1 (150 từ) + 40 phút Task 2 (250 từ). Khóa nộp bài tự động.</p>
-            <button onclick="window.app.navigateTo('day-detail', { day: 20 })" class="btn btn-primary text-xs w-full py-2">
+            <button onclick="window.app.navigateTo('day-detail', { day: ${mockDay} })" class="btn btn-primary text-xs w-full py-2">
               Bắt đầu Writing Mock Test
             </button>
           </div>
@@ -1248,7 +1369,7 @@ class IELTSMarathonApp {
             <span class="font-mono text-xs text-[var(--ink-primary)] font-bold block mb-1">SECTION 4 • 15 PHÚT</span>
             <h3 class="font-display text-base font-bold text-[var(--ink-primary)] mb-2">Speaking Face-to-Face Simulation</h3>
             <p class="text-xs text-[var(--ink-secondary)] mb-4">Part 1, 2, 3 với đồng hồ đếm lùi và ghi âm tự động toàn bộ buổi thi.</p>
-            <button onclick="window.app.navigateTo('day-detail', { day: 20 })" class="btn btn-primary text-xs w-full py-2">
+            <button onclick="window.app.navigateTo('day-detail', { day: ${mockDay} })" class="btn btn-primary text-xs w-full py-2">
               Bắt đầu Speaking Mock Test
             </button>
           </div>
@@ -1298,14 +1419,27 @@ class IELTSMarathonApp {
       <div class="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
         <div class="editorial-card p-6 mb-6">
           <h1 class="font-display text-xl font-bold text-[var(--ink-primary)] mb-1">Cài đặt Ứng dụng</h1>
-          <p class="text-xs text-[var(--ink-secondary)]">Quản lý nhịp học, giao diện sáng/tối và sao lưu dữ liệu cá nhân.</p>
+          <p class="text-xs text-[var(--ink-secondary)]">Quản lý lộ trình học, nhịp học, giao diện sáng/tối và sao lưu dữ liệu cá nhân.</p>
         </div>
 
         <div class="editorial-card p-6 space-y-6">
           <div>
+            <label class="font-display text-sm font-bold text-[var(--ink-primary)] block mb-1">Lộ trình học tập:</label>
+            <div class="grid grid-cols-2 gap-3">
+              ${Object.values(TRACKS).map(t => `
+                <button onclick="window.app.setTrack('${t.id}')" 
+                        class="btn ${this.track === t.id ? 'btn-primary' : 'btn-secondary'} text-xs py-2.5 leading-snug">
+                  ${t.label}
+                </button>
+              `).join('')}
+            </div>
+            <p class="text-[11px] text-[var(--ink-secondary)] mt-2">Mỗi lộ trình có tiến độ, nhịp học và ngày kiểm soát riêng.</p>
+          </div>
+
+          <div class="pt-4 border-t border-[var(--border-subtle)]">
             <label class="font-display text-sm font-bold text-[var(--ink-primary)] block mb-1">Nhịp học mặc định hàng ngày:</label>
             <div class="grid grid-cols-3 gap-3">
-              ${[60, 90, 150].map(r => `
+              ${this.trackMeta.rhythms.map(r => `
                 <button onclick="window.app.setRhythm(${r})" 
                         class="btn ${this.rhythm === r ? 'btn-primary' : 'btn-secondary'} text-xs py-2.5">
                   ${r} Phút
