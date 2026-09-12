@@ -14,7 +14,9 @@ const STORAGE_KEYS = {
   ERROR_LOG: 'ielts_marathon_error_log',
   PHRASE_BANK: 'ielts_marathon_phrase_bank',
   STREAK: 'ielts_marathon_streak',
-  CHECKPOINTS: 'ielts_marathon_checkpoints'
+  CHECKPOINTS: 'ielts_marathon_checkpoints',
+  MODE: 'ielts_marathon_mode',
+  ONBOARDED: 'ielts_marathon_onboarded'
 };
 
 const DEFAULT_RHYTHM = {
@@ -98,6 +100,19 @@ export const StorageService = {
   },
   setTheme(theme) {
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
+  },
+
+  getMode() {
+    return localStorage.getItem(STORAGE_KEYS.MODE) || 'guided';
+  },
+  setMode(mode) {
+    localStorage.setItem(STORAGE_KEYS.MODE, mode);
+  },
+  getOnboarded() {
+    return localStorage.getItem(STORAGE_KEYS.ONBOARDED) === '1';
+  },
+  setOnboarded(flag) {
+    localStorage.setItem(STORAGE_KEYS.ONBOARDED, flag ? '1' : '0');
   },
 
   getSkillLevels() {

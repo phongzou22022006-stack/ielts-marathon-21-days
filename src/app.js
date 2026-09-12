@@ -28,6 +28,8 @@ class IELTSMarathonApp {
     this.currentDay = Math.min(Math.max(StorageService.getCurrentDay(this.track), 1), this.totalDays);
     this.rhythm = StorageService.getRhythm(this.track);
     this.theme = StorageService.getTheme();
+    this.mode = StorageService.getMode();
+    this.guidedFocus = '';
     this.skillLevels = StorageService.getSkillLevels();
     this.currentView = 'day-detail';
     this.checkpointDay = this.trackMeta.checkpoints[0] || 7;
@@ -137,6 +139,119 @@ class IELTSMarathonApp {
     this.render();
   }
 
+  setMode(mode) {
+    this.mode = mode === 'classic' ? 'classic' : 'guided';
+    StorageService.setMode(this.mode);
+    this.guidedFocus = '';
+    this.render();
+  }
+
+  completeOnboarding() {
+    StorageService.setOnboarded(true);
+    this.navigateTo('day-detail', { day: 1 });
+  }
+
+  _dayHasActivity(p) {
+    if (!p || typeof p !== 'object') return false;
+    return (
+      (p.checklistCompleted && p.checklistCompleted.length > 0) ||
+      (p.readingAnswers && Object.keys(p.readingAnswers).length > 0) ||
+      (p.listeningAnswers && Object.keys(p.listeningAnswers).length > 0) ||
+      (p.listeningErrors && p.listeningErrors.length > 0) ||
+      (p.listeningListenCount || 0) > 0 ||
+      Object.values(p.readingEvidence || {}).some(Boolean) ||
+      !!(p.writingFirstDraft || p.writingRewrite || p.speakingTranscript || p.grammarAnswer) ||
+      (p.vocabExamples && Object.keys(p.vocabExamples).length > 0)
+    );
+  }
+
+  _dayStepDone(stepId, dayData, p) {
+    p = p || {};
+    if (stepId === 'terrain') return this._dayHasActivity(p);
+    if (stepId === 'checklist') return (p.checklistCompleted || []).length >= (dayData.checklist || []).length;
+    if (stepId === 'reading') return dayData.reading ? (Object.keys(p.readingAnswers || {}).length > 0 || Object.values(p.readingEvidence || {}).some(Boolean)) : true;
+    if (stepId === 'listening') return dayData.listening ? (Object.keys(p.listeningAnswers || {}).length > 0 || (p.listeningListenCount || 0) > 0 || (p.listeningErrors || []).length > 0) : true;
+    if (stepId === 'writing') return dayData.writing ? !!p.writingRewrite : true;
+    if (stepId === 'speaking') return dayData.speaking ? !!p.speakingTranscript : true;
+    if (stepId === 'vocab') return Object.keys(p.vocabExamples || {}).length > 0;
+    if (stepId === 'grammar') return !!p.grammarAnswer;
+    return false;
+  }
+
+  computeDaySteps(dayData, dayProgress) {
+    const all = [
+      { id: 'terrain', label: 'Định hướng & lịch' },
+      { id: 'checklist', label: 'Tiêu chí hoàn thành' },
+      { id: 'reading', label: 'Reading & Bằng chứng' },
+      { id: 'listening', label: 'Listening' },
+      { id: 'writing', label: 'Writing & Rewrite' },
+      { id: 'speaking', label: 'Speaking' },
+      { id: 'vocab', label: 'Từ vựng & cụm' },
+      { id: 'grammar', label: 'Ngữ pháp' }
+    ].filter(s => {
+      if (s.id === 'reading') return !!dayData.reading;
+      if (s.id === 'listening') return !!dayData.listening;
+      if (s.id === 'writing') return !!dayData.writing;
+      if (s.id === 'speaking') return !!dayData.speaking;
+      return true;
+    });
+    const steps = all.map(s => ({ ...s, done: this._dayStepDone(s.id, dayData, dayProgress) }));
+    const currentIdx = steps.findIndex(s => !s.done);
+    const allDone = currentIdx === -1;
+    const cIdx = allDone ? Math.max(0, steps.length - 1) : currentIdx;
+    return { steps, currentIdx: cIdx, firstPending: currentIdx === -1 ? steps.length : currentIdx, allDone, currentId: allDone ? 'done' : steps[cIdx].id };
+  }
+
+  jumpStep(id) {
+    const sec = document.querySelector('[data-step-group="' + id + '"]');
+    if (!sec) return;
+    if (sec.classList.contains('hidden')) sec.classList.remove('hidden');
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  applyGuidedSteps(root) {
+    if (this.mode !== 'guided' || this.currentView !== 'day-detail') return;
+    const dayData = this.curriculum.find(d => d.day === this.currentDay) || this.curriculum[0];
+    const p = StorageService.getDayProgress(this.currentDay);
+    const { steps, currentIdx, allDone } = this.computeDaySteps(dayData, p);
+    steps.forEach((st, idx) => {
+      const secs = root.querySelectorAll('[data-step-group="' + st.id + '"]');
+      secs.forEach((sec, k) => {
+        if (allDone || idx === currentIdx) {
+          sec.classList.remove('hidden');
+          return;
+        }
+        if (sec.classList.contains('hidden')) return;
+        const isDone = st.done;
+        const bar = document.createElement('button');
+        bar.type = 'button';
+        bar.className = 'w-full text-left p-3 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-muted)] text-xs mb-6 cursor-pointer hover:border-[var(--accent-terracotta)] hover:opacity-100 transition-all flex items-center justify-between gap-2 ' + (isDone ? 'opacity-90' : 'opacity-70');
+        bar.innerHTML = '<span>' + (isDone ? '✅ Đã hoàn thành · ' : '🔒 Bước trước chưa xong · ') + '<strong>' + st.label + '</strong> — bấm để ' + (isDone ? 'mở lại' : 'xem trước') + '</span><span class="font-mono text-[10px] text-[var(--ink-muted)] shrink-0">Bước ' + (idx + 1) + '</span>';
+        bar.addEventListener('click', () => {
+          sec.classList.toggle('hidden');
+          if (!sec.classList.contains('hidden')) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          else window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        sec.parentNode.insertBefore(bar, sec);
+        sec.classList.add('hidden');
+      });
+    });
+    if (!allDone) {
+      const cur = steps[currentIdx];
+      if (cur && this.guidedFocus !== (this.currentDay + ':' + cur.id)) {
+        this.guidedFocus = this.currentDay + ':' + cur.id;
+        setTimeout(() => {
+          const curSec = root.querySelector('[data-step-group="' + cur.id + '"]');
+          if (curSec && curSec.offsetHeight < 10) {
+            const wrap = curSec.parentElement;
+            if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          if (curSec) curSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      }
+    }
+  }
+
   startTimer() {
     if (this.timerRunning) return;
     this.timerRunning = true;
@@ -216,6 +331,7 @@ class IELTSMarathonApp {
     else if (this.currentView === 'final-audit') root.innerHTML = this.renderFinalAudit();
     else if (this.currentView === 'settings') root.innerHTML = this.renderSettings();
     else root.innerHTML = this.renderDayDetail();
+    if (this.currentView === 'day-detail') this.applyGuidedSteps(root);
     this.syncHeader();
     this.updateTimerDisplay();
     this.bindDayDetailEvents();
@@ -227,6 +343,15 @@ class IELTSMarathonApp {
     const completedDays = Object.keys(allProgress).length;
     const totalN = this.totalDays;
     const progressPercent = Math.round((completedDays / totalN) * 100);
+    const onboarded = StorageService.getOnboarded();
+    const isGuided = this.mode === 'guided';
+    const nextDay = (() => {
+      for (let d = 1; d <= this.totalDays; d++) {
+        if (!this._dayHasActivity(StorageService.getDayProgress(d))) return d;
+      }
+      return this.totalDays;
+    })();
+    const currentPhaseNum = (this.curriculum[nextDay - 1] || this.curriculum[0]).phase;
     const streak = (() => {
       const studied = new Set();
       Object.values(allProgress).forEach(p => {
@@ -247,6 +372,7 @@ class IELTSMarathonApp {
       const phaseDays = this.curriculum.filter(d => d.phase === phaseMeta.number);
       const phaseTitle = `Giai đoạn ${phaseMeta.number}: ${phaseMeta.title} (${phaseMeta.range})`;
       const phaseDesc = phaseMeta.desc;
+      const gated = isGuided && phaseMeta.number > currentPhaseNum;
 
       let daysCards = '';
       phaseDays.forEach(dayItem => {
@@ -272,8 +398,9 @@ class IELTSMarathonApp {
           <div class="mb-3">
             <h3 class="font-display text-lg font-bold text-[var(--ink-primary)]">${phaseTitle}</h3>
             <p class="text-xs text-[var(--ink-secondary)]">${phaseDesc}</p>
+            ${gated ? '<p class="text-[11px] text-[var(--ink-muted)] mt-1.5 flex items-center gap-1.5"><span>🔒</span> Giai đoạn này chưa mở — hoàn thành Giai đoạn ' + currentPhaseNum + ' trước. Bạn vẫn có thể xem trước nếu muốn.</p>' : ''}
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${gated ? 'opacity-45 saturate-50' : ''}">
             ${daysCards}
           </div>
         </div>
@@ -282,6 +409,33 @@ class IELTSMarathonApp {
 
     return `
       <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
+        ${isGuided && !onboarded ? `
+        <div class="editorial-card p-6 sm:p-8 mb-6 border-l-4 border-l-[var(--accent-sage)]">
+          <div class="flex flex-col lg:flex-row lg:items-center gap-6">
+            <div class="flex-1">
+              <span class="badge badge-sage font-mono mb-2">👋 CHÀO NGƯỜI MỚI</span>
+              <h1 class="font-display text-2xl font-extrabold text-[var(--ink-primary)] mb-2">Chào mừng đến ${this.trackMeta.label}</h1>
+              <p class="text-sm text-[var(--ink-secondary)] leading-relaxed mb-3 max-w-2xl">
+                Bạn không cần biết bắt đầu từ đâu — ứng dụng sẽ <strong>dẫn bạn làm từng bước, xong bước này mới mở bước kế tiếp</strong>.
+                Mỗi ngày có một lộ trình rõ ràng: đọc định hướng → đánh dấu tiêu chí → làm bài → ghi nhật ký lỗi.
+                Chọn nhịp học thoải mái rồi bấm bắt đầu.
+              </p>
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="flex gap-2">
+                  ${this.trackMeta.rhythms.map(r => `
+                    <button onclick="window.app.setRhythm(${r})" class="btn ${this.rhythm === r ? 'btn-primary' : 'btn-secondary'} text-xs py-2 px-4">${r} Phút</button>
+                  `).join('')}
+                </div>
+                <button onclick="window.app.completeOnboarding()" class="btn btn-primary px-6 py-2.5 text-sm shadow-md">
+                  ▶ BẮT ĐẦU NGÀY 1
+                </button>
+              </div>
+              <p class="text-[11px] text-[var(--ink-muted)] mt-3">Muốn xem toàn bộ lộ trình kiểu cũ? Chuyển chế độ "Classic" trong Cài đặt. Bạn có thể đổi giữa ${Object.values(TRACKS).map(t => t.label).join(' và ')} ở menu trên.</p>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
         <div class="editorial-card p-6 sm:p-8 mb-8 bg-gradient-to-r from-[var(--surface)] to-[var(--surface-muted)]">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
@@ -314,6 +468,24 @@ class IELTSMarathonApp {
             </div>
           </div>
         </div>
+        ${isGuided ? `
+        <div class="editorial-card p-6 mb-6 border-l-4 border-l-[var(--accent-terracotta)]">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span class="badge badge-terracotta font-mono">NEXT STEP</span>
+                <span class="font-mono text-[11px] text-[var(--ink-muted)]">Ngày ${String(nextDay).padStart(2, '0')} / ${completedDays === totalN ? 'Hoàn tất lộ trình 🎉' : 'Còn ' + (totalN - completedDays) + ' ngày chưa bắt đầu'}</span>
+              </div>
+              <h2 class="font-display text-lg font-bold text-[var(--ink-primary)]">Ngày ${String(nextDay).padStart(2, '0')}: ${this.curriculum[nextDay - 1].theme}</h2>
+              <p class="text-xs text-[var(--ink-secondary)] mt-1 line-clamp-2 max-w-2xl">${this.curriculum[nextDay - 1].orientation}</p>
+              ${completedDays === totalN ? '<p class="text-xs text-[var(--accent-sage)] mt-2 font-semibold">🎉 Tốt — bạn đã chạm tới ngày cuối. Hoàn thành kiểm toán để chốt lộ trình.</p>' : ''}
+            </div>
+            <button onclick="window.app.navigateTo('day-detail', { day: ${nextDay} })" class="btn btn-primary px-5 py-2.5 text-sm shrink-0 shadow-md">
+              ▶ BẮT ĐẦU NGÀY ${String(nextDay).padStart(2, '0')}
+            </button>
+          </div>
+        </div>
+        ` : ''}
         ${phasesHtml}
       </div>
     `;
@@ -436,6 +608,32 @@ class IELTSMarathonApp {
           </div>
         </div>
 
+        ${this.mode === 'guided' ? (() => {
+          const { steps, currentIdx, allDone, currentId } = this.computeDaySteps(dayData, dayProgress);
+          const currentStep = allDone ? null : steps[currentIdx];
+          return `
+          <div class="editorial-card p-4 mb-6">
+            <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <span class="font-mono text-xs font-bold text-[var(--ink-primary)]">🧭 LỘ TRÌNH NGÀY HÔM NAY</span>
+              <span class="text-[11px] text-[var(--ink-secondary)]">${allDone ? `Hoàn thành ${steps.length}/${steps.length}` : `Bước ${currentIdx + 1}/${steps.length}`}</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              ${steps.map((s, i) => {
+                const state = allDone ? 'done' : (i < currentIdx ? 'done' : (i === currentIdx ? 'current' : 'locked'));
+                return `
+                <button onclick="window.app.jumpStep('${s.id}')" class="px-2 py-1 rounded-md text-[11px] font-bold border transition-all ${state === 'done' ? 'bg-[var(--accent-sage)]/10 text-[var(--accent-sage)] border-[var(--accent-sage)]/30' : state === 'current' ? 'bg-[var(--accent-terracotta)] text-white border-[var(--accent-terracotta)]' : 'bg-[var(--surface-muted)] text-[var(--ink-muted)] border-[var(--border-subtle)]'}">${state === 'done' ? '✓' : state === 'current' ? '▶' : '🔒'} ${i + 1}. ${s.label}</button>
+              `;
+              }).join('')}
+            </div>
+            <p class="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
+              ${allDone
+                ? '🎉 Tất cả bước hôm nay đã xong. Nhớ ghi nhật ký lỗi, chốt sản phẩm nộp, rồi chuyển sang ngày tiếp theo.'
+                : 'Đang ở bước: <strong>' + currentStep.label + '</strong> — làm xong bước này, bước kế tiếp sẽ mở ra. Bấm chip để xem lại bước đã xong.'}
+            </p>
+          </div>
+        `;
+        })() : ''}
+
         <!-- 3 Columns Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
@@ -462,7 +660,7 @@ class IELTSMarathonApp {
           <div class="lg:col-span-6 space-y-6">
 
             <!-- 1. Orientation -->
-            <section class="editorial-card p-5">
+            <section data-step-group="terrain" class="editorial-card p-5">
               <div class="flex items-center gap-2 mb-2">
                 <span class="font-mono text-xs font-bold text-[var(--accent-terracotta)]">01. ĐỊNH HƯỚNG HỌC TẬP</span>
               </div>
@@ -470,7 +668,7 @@ class IELTSMarathonApp {
             </section>
 
             <!-- 2. Checklist -->
-            <section class="editorial-card p-5">
+            <section data-step-group="terrain" class="editorial-card p-5">
               <div class="flex items-center justify-between mb-3">
                 <span class="font-mono text-xs font-bold text-[var(--accent-sage)]">02. TIÊU CHÍ HOÀN THÀNH</span>
                 <span class="text-xs text-[var(--ink-secondary)]">Đánh dấu khi xong</span>
@@ -490,7 +688,7 @@ class IELTSMarathonApp {
             </section>
 
             <!-- 3. Overview -->
-            <section class="editorial-card p-5">
+            <section data-step-group="terrain" class="editorial-card p-5">
               <div class="flex items-center justify-between mb-3">
                 <span class="font-mono text-xs font-bold text-[var(--ink-secondary)]">03. TỔNG QUAN TRONG NGÀY</span>
                 <span class="badge badge-muted font-mono">${rhythmInfo.label}</span>
@@ -508,7 +706,7 @@ class IELTSMarathonApp {
 
             <!-- 4. Reading Module -->
             ${dayData.reading ? `
-            <section class="editorial-card p-5 border-l-4 border-l-[var(--accent-terracotta)]">
+            <section data-step-group="reading" class="editorial-card p-5 border-l-4 border-l-[var(--accent-terracotta)]">
               <div class="flex items-center justify-between mb-3">
                 <div>
                   <span class="font-mono text-xs font-bold text-[var(--accent-terracotta)]">04. READING & EVIDENCE LOG</span>
@@ -553,7 +751,7 @@ class IELTSMarathonApp {
 
             <!-- 5. Listening Module (NEW) -->
             ${dayData.listening ? `
-            <section class="editorial-card p-5 border-l-4 border-l-[var(--accent-sage)]">
+            <section data-step-group="listening" class="editorial-card p-5 border-l-4 border-l-[var(--accent-sage)]">
               <div class="flex items-center justify-between mb-2">
                 <div>
                   <span class="font-mono text-xs font-bold text-[var(--accent-sage)]">05. LISTENING MODULE (MỚI BỔ SUNG)</span>
@@ -649,7 +847,7 @@ class IELTSMarathonApp {
 
             <!-- 6. Writing Module -->
             ${dayData.writing ? `
-            <section class="editorial-card p-5 border-l-4 border-l-[var(--accent-amber)]">
+            <section data-step-group="writing" class="editorial-card p-5 border-l-4 border-l-[var(--accent-amber)]">
               <div class="flex items-center justify-between mb-2">
                 <div>
                   <span class="font-mono text-xs font-bold text-[var(--accent-amber)]">06. WRITING TASK & REWRITE</span>
@@ -733,7 +931,7 @@ class IELTSMarathonApp {
 
             <!-- 7. Speaking Module -->
             ${dayData.speaking ? `
-            <section class="editorial-card p-5">
+            <section data-step-group="speaking" class="editorial-card p-5">
               <div class="flex items-center justify-between mb-2">
                 <div>
                   <span class="font-mono text-xs font-bold text-[var(--accent-terracotta)]">07. SPEAKING DUAL-RECORD</span>
@@ -802,7 +1000,7 @@ class IELTSMarathonApp {
 
             <!-- 8. Vocabulary -->
             ${dayData.vocabulary && dayData.vocabulary.length ? `
-            <section class="editorial-card p-5">
+            <section data-step-group="vocab" class="editorial-card p-5">
               <div class="flex items-center justify-between mb-3">
                 <span class="font-mono text-xs font-bold text-[var(--accent-terracotta)]">08. VOCABULARY PHRASE BANK</span>
                 <span class="badge badge-muted text-xs">Chủ đề: ${dayData.theme}</span>
@@ -828,7 +1026,7 @@ class IELTSMarathonApp {
 
             <!-- 9. Grammar Drill -->
             ${dayData.grammar ? `
-            <section class="editorial-card p-5">
+            <section data-step-group="grammar" class="editorial-card p-5">
               <div class="flex items-center justify-between mb-2">
                 <span class="font-mono text-xs font-bold text-[var(--ink-secondary)]">09. GRAMMAR DRILL</span>
               </div>
@@ -853,7 +1051,7 @@ class IELTSMarathonApp {
 
             <!-- 10. Deliverables List -->
             ${dayData.deliverables && dayData.deliverables.length ? `
-            <section class="editorial-card p-5 bg-[var(--surface-muted)]">
+            <section data-step-group="deliverables" class="editorial-card p-5 bg-[var(--surface-muted)]">
               <div class="flex items-center justify-between mb-2">
                 <span class="font-mono text-xs font-bold text-[var(--ink-primary)]">10. SẢN PHẨM CẦN NỘP CUỐI NGÀY</span>
                 <span class="badge badge-sage">Tự động đồng bộ</span>
@@ -1523,6 +1721,23 @@ renderMockTest() {
               `).join('')}
             </div>
             <p class="text-[11px] text-[var(--ink-secondary)] mt-2">Mỗi lộ trình có tiến độ, nhịp học và ngày kiểm soát riêng.</p>
+          </div>
+
+          <div class="pt-4 border-t border-[var(--border-subtle)]">
+            <label class="font-display text-sm font-bold text-[var(--ink-primary)] block mb-1">Chế độ học:</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button onclick="window.app.setMode('guided')" 
+                      class="btn ${this.mode === 'guided' ? 'btn-primary' : 'btn-secondary'} text-xs py-2.5 leading-snug flex flex-col items-start gap-0.5 text-left">
+                <span>🧭 Lớp lang (Người mới)</span>
+                <span class="font-normal opacity-80 text-[10px]">Từng bước — xong bước này mới mở bước kế</span>
+              </button>
+              <button onclick="window.app.setMode('classic')" 
+                      class="btn ${this.mode === 'classic' ? 'btn-primary' : 'btn-secondary'} text-xs py-2.5 leading-snug flex flex-col items-start gap-0.5 text-left">
+                <span>📚 Classic (Đã quen)</span>
+                <span class="font-normal opacity-80 text-[10px]">Hiển thị toàn bộ các mục như cũ</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-[var(--ink-secondary)] mt-2">Chế độ Lớp lang giúp người mới không bị "ngợp": mỗi ngày chỉ tập trung các bước đang dở, Dashboard nhấn vào ngày tiếp theo và khoá mềm các giai đoạn phía sau.</p>
           </div>
 
           <div class="pt-4 border-t border-[var(--border-subtle)]">
