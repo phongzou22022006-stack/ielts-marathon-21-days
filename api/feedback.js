@@ -48,7 +48,7 @@ function buildMessages(feature, text, context) {
 }
 
 async function callKey(key, messages) {
-  const payload = { model: MODEL, messages, max_tokens: 700, temperature: 0.4 };
+  const payload = { model: MODEL, messages, max_tokens: 2048, temperature: 0.4 };
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
