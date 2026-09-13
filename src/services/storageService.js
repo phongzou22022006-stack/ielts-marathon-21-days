@@ -16,7 +16,8 @@ const STORAGE_KEYS = {
   STREAK: 'ielts_marathon_streak',
   CHECKPOINTS: 'ielts_marathon_checkpoints',
   MODE: 'ielts_marathon_mode',
-  ONBOARDED: 'ielts_marathon_onboarded'
+  ONBOARDED: 'ielts_marathon_onboarded',
+  VOCAB_STATE: 'ielts_marathon_vocab_state'
 };
 
 const DEFAULT_RHYTHM = {
@@ -113,6 +114,19 @@ export const StorageService = {
   },
   setOnboarded(flag) {
     localStorage.setItem(STORAGE_KEYS.ONBOARDED, flag ? '1' : '0');
+  },
+
+  // Vocabulary Review State (namespaced per track; map term -> 'learned' | 'studying')
+  getVocabState(track) {
+    const t = track || this.getTrack();
+    return JSON.parse(localStorage.getItem(keyFor(STORAGE_KEYS.VOCAB_STATE, t))) || {};
+  },
+  setVocabStatus(term, status, track) {
+    const t = track || this.getTrack();
+    const state = this.getVocabState(t);
+    if (status === 'learned' || status === 'studying') state[term] = status;
+    else delete state[term];
+    localStorage.setItem(keyFor(STORAGE_KEYS.VOCAB_STATE, t), JSON.stringify(state));
   },
 
   getSkillLevels() {

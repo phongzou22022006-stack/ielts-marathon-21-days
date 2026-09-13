@@ -39,6 +39,8 @@ class IELTSMarathonApp {
     this.recorderAttempt1 = new AudioRecorderEngine();
     this.recorderAttempt2 = new AudioRecorderEngine();
     this.errorFilterSkill = 'all';
+    this.vocabFilter = 'all';
+    this.vocabShuffle = false;
     this.init();
   }
 
@@ -365,14 +367,162 @@ class IELTSMarathonApp {
     else if (this.currentView === 'error-log') root.innerHTML = this.renderErrorLog();
     else if (this.currentView === 'portfolio') root.innerHTML = this.renderPortfolio();
     else if (this.currentView === 'checkpoint') root.innerHTML = this.renderCheckpoint(this.checkpointDay);
+    else if (this.currentView === 'review') root.innerHTML = this.renderReview();
     else if (this.currentView === 'mock-test') root.innerHTML = this.renderMockTest();
     else if (this.currentView === 'final-audit') root.innerHTML = this.renderFinalAudit();
     else if (this.currentView === 'settings') root.innerHTML = this.renderSettings();
     else root.innerHTML = this.renderDayDetail();
     if (this.currentView === 'day-detail') this.applyGuidedSteps(root);
+    else if (this.currentView === 'review') this.bindReviewEvents();
     this.syncHeader();
     this.updateTimerDisplay();
     this.bindDayDetailEvents();
+  }
+
+  collectVocab() {
+    const out = [];
+    this.curriculum.forEach(d => {
+      (d.vocabulary || []).forEach(v => {
+        out.push({
+          day: d.day,
+          term: String(v.term || '').trim(),
+          pos: v.pos || '',
+          phonetic: v.phonetic || '',
+          meaning: v.meaning || '',
+          example: v.example || ''
+        });
+      });
+    });
+    return out.filter(i => i.term);
+  }
+
+  renderReview() {
+    const state = StorageService.getVocabState(this.track) || {};
+    const all = this.collectVocab();
+    const learned = all.filter(i => state[i.term] === 'learned').length;
+    const studying = all.filter(i => state[i.term] === 'studying').length;
+
+    let list = all.slice();
+    if (this.vocabFilter === 'learned') list = list.filter(i => state[i.term] === 'learned');
+    else if (this.vocabFilter === 'studying') list = list.filter(i => state[i.term] === 'studying');
+    else if (this.vocabFilter === 'new') list = list.filter(i => !state[i.term]);
+    if (this.vocabShuffle) {
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+      }
+    }
+
+    const filters = [
+      ['all', `Tất cả (${all.length})`],
+      ['new', `Chưa ôn (${all.length - learned - studying})`],
+      ['studying', `Đang ôn (${studying})`],
+      ['learned', `Đã thuộc (${learned})`]
+    ];
+
+    const cards = list.map(item => {
+      const st = state[item.term];
+      const badge = st === 'learned'
+        ? '<span class="badge badge-sage">✓ Thuộc</span>'
+        : (st === 'studying' ? '<span class="badge badge-amber">⟳ Đang ôn</span>' : '');
+      return `
+        <div class="flashcard ${st === 'learned' ? 'vocab-learned' : (st === 'studying' ? 'vocab-studying' : '')}" data-term="${escapeForAttr(item.term)}">
+          <div class="flashcard-inner" role="button" tabindex="0">
+            <div class="flashcard-face flashcard-front">
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="font-mono text-[10px] font-bold text-[var(--ink-secondary)]">NGÀY ${String(item.day).padStart(2, '0')}</span>
+                ${badge}
+              </div>
+              <h4 class="font-display text-base sm:text-lg font-bold leading-snug text-[var(--ink-primary)]">${escapeHtml(item.term)}</h4>
+              <p class="text-[11px] text-[var(--ink-secondary)] mt-1">${escapeHtml(item.pos)}${item.phonetic ? ' · ' + escapeHtml(item.phonetic) : ''}</p>
+              <p class="mt-auto text-[10px] text-[var(--ink-muted)]">Nhấn để lật xem nghĩa</p>
+            </div>
+            <div class="flashcard-face flashcard-back">
+              <p class="text-sm text-[var(--ink-primary)] leading-relaxed mb-2">${escapeHtml(item.meaning)}</p>
+              <p class="text-xs text-[var(--ink-secondary)] italic leading-relaxed">${item.example ? '“' + escapeHtml(item.example) + '”' : ''}</p>
+            </div>
+          </div>
+          <div class="flashcard-actions">
+            <button type="button" data-action="studying" class="btn btn-ghost text-[11px] px-2.5 py-1.5">⟳ Cần ôn lại</button>
+            <button type="button" data-action="learned" class="btn btn-primary text-[11px] px-3 py-1.5">✓ Đã thuộc</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const empty = !list.length
+      ? `<div class="editorial-card p-10 text-center col-span-full">
+          <p class="text-3xl mb-2">${all.length === 0 ? '📭' : '🎉'}</p>
+          <h3 class="font-display font-bold text-sm text-[var(--ink-primary)]">${all.length === 0 ? 'Lộ trình này chưa có từ vựng để ôn.' : (this.vocabFilter === 'learned' ? 'Chưa có từ nào được đánh dấu là đã thuộc.' : (this.vocabFilter === 'studying' ? 'Không có từ nào đang cần ôn.' : 'Tuyệt! Bạn đã ôn xong toàn bộ từ vựng.'))}</h3>
+          <p class="text-xs text-[var(--ink-secondary)] mt-1">${this.vocabFilter !== 'all' ? 'Chuyển bộ lọc “Tất cả” để tiếp tục ôn.' : 'Quay lại Lộ trình và hoàn thành các ngày học nhé.'}</p>
+        </div>`
+      : '';
+
+    return `
+      <div id="review-root" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
+        <div class="editorial-card p-6 mb-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <span class="badge badge-terracotta font-mono mb-2">🔁 ÔN TỪ VỰNG</span>
+              <h1 class="font-display text-xl sm:text-2xl font-extrabold text-[var(--ink-primary)]">Flashcard ${this.totalDays} Ngày</h1>
+              <p class="text-xs sm:text-sm text-[var(--ink-secondary)] mt-1">Lật thẻ để xem nghĩa và ví dụ, đánh dấu tiến độ ôn từng từ. Tiến độ được lưu riêng theo từng lộ trình.</p>
+            </div>
+            <div class="flex flex-wrap gap-2 sm:justify-end">
+              <div class="badge badge-sage font-mono">✓ Thuộc: ${learned}</div>
+              <div class="badge badge-amber font-mono">⟳ Đang ôn: ${studying}</div>
+              <div class="badge badge-muted font-mono">Tổng: ${all.length}</div>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between flex-wrap gap-3">
+            <div class="flex flex-wrap gap-1.5">
+              ${filters.map(([key, label]) => `
+                <button onclick="window.app.setVocabFilter('${key}')" class="btn text-[11px] px-3 py-1.5 ${this.vocabFilter === key ? 'btn-primary' : 'btn-ghost'}">${label}</button>
+              `).join('')}
+            </div>
+            <button onclick="window.app.toggleVocabShuffle()" class="btn btn-ghost text-[11px] px-3 py-1.5">${this.vocabShuffle ? '🔀 Đang xáo trộn' : '🔀 Xáo trộn thứ tự'}</button>
+          </div>
+        </div>
+        <div class="review-grid">${cards || empty}</div>
+      </div>
+    `;
+  }
+
+  setVocabFilter(f) {
+    this.vocabFilter = f;
+    this.render();
+  }
+
+  toggleVocabShuffle() {
+    this.vocabShuffle = !this.vocabShuffle;
+    this.render();
+  }
+
+  bindReviewEvents() {
+    const root = document.getElementById('review-root');
+    if (!root) return;
+    root.addEventListener('click', (e) => {
+      const card = e.target.closest('.flashcard');
+      if (!card) return;
+      const actionBtn = e.target.closest('[data-action]');
+      if (actionBtn) {
+        e.stopPropagation();
+        const action = actionBtn.getAttribute('data-action');
+        const term = card.getAttribute('data-term');
+        StorageService.setVocabStatus(term, action, this.track);
+        this.showToast(action === 'learned' ? 'Đã đánh dấu thuộc: ' + term : 'Cho ' + term + ' vào danh sách cần ôn lại.', 'success', 2000);
+        this.render();
+        return;
+      }
+      if (e.target.closest('.flashcard-actions')) return;
+      card.classList.toggle('flipped');
+    });
+    root.addEventListener('keydown', (e) => {
+      const card = e.target.closest('.flashcard-inner');
+      if (card && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        card.closest('.flashcard').classList.toggle('flipped');
+      }
+    });
   }
 
   renderDashboard() {
@@ -505,6 +655,16 @@ class IELTSMarathonApp {
               <div class="bg-[var(--accent-terracotta)] h-2.5 rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div>
             </div>
           </div>
+        </div>
+        <div class="editorial-card p-5 mb-6 flex flex-wrap items-center justify-between gap-4 hover:border-[var(--accent-terracotta)] transition-all cursor-pointer" onclick="window.app.navigateTo('review')" role="button" tabindex="0">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-2xl shrink-0">🔁</span>
+            <div class="min-w-0">
+              <h3 class="font-display font-bold text-sm text-[var(--ink-primary)]">Ôn từ vựng bằng Flashcard</h3>
+              <p class="text-xs text-[var(--ink-secondary)] mt-0.5">Lật thẻ xem nghĩa &amp; ví dụ — tổng hợp toàn bộ từ vựng trong ${this.totalDays} ngày.</p>
+            </div>
+          </div>
+          <button class="btn btn-secondary shrink-0 text-sm px-4 py-2">Mở thẻ →</button>
         </div>
         ${isGuided ? `
         <div class="editorial-card p-6 mb-6 border-l-4 border-l-[var(--accent-terracotta)]">

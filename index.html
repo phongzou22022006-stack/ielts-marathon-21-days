@@ -2,9 +2,14 @@
 <html lang="vi" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>IELTS Marathon 21 Days - Tự học có kiểm soát</title>
   <meta name="description" content="Nền tảng tự học IELTS 21 ngày chuyển thể từ IELTS Marathon 21-Day Companion với đầy đủ module Listening mới, bằng chứng xác thực và quy tắc bản đầu bất biến.">
+  <meta name="theme-color" content="#c2410c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/icons/icon-512.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   
   <!-- Google Fonts: Plus Jakarta Sans (Display), Inter (Body), Newsreader (Editorial), JetBrains Mono (Mono) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,6 +63,7 @@
           <button data-nav="error-log" class="btn btn-ghost text-xs px-2.5 py-1.5">🎯 Nhật ký lỗi</button>
           <button data-nav="portfolio" class="btn btn-ghost text-xs px-2.5 py-1.5">📁 Hồ sơ Portfolio</button>
           <button data-nav="checkpoint" class="btn btn-ghost text-xs px-2.5 py-1.5">⭐ Checkpoints</button>
+          <button data-nav="review" class="btn btn-ghost text-xs px-2.5 py-1.5">🔁 Ôn từ</button>
           <button data-nav="mock-test" id="nav-mock-test" class="btn btn-ghost text-xs px-2.5 py-1.5 text-[var(--accent-terracotta)]">🎯 Thi thử Ngày 20</button>
         </nav>
       </div>
@@ -126,7 +132,14 @@
     </button>
   </nav>
 
-  <!-- Application Entry Point -->
+<!-- Application Entry Point -->
   <script type="module" src="src/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

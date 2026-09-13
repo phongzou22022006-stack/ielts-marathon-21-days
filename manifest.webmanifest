@@ -1,0 +1,32 @@
+{
+  "name": "IELTS Marathon: Tự học 21 ngày",
+  "short_name": "IELTS Marathon",
+  "description": "Nền tảng tự học IELTS có kiểm soát: lộ trình 21 ngày và 14 ngày, đầy đủ Listening, tự chấm điểm, nhật ký lỗi và hồ sơ portfolio.",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf7f2",
+  "theme_color": "#c2410c",
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
