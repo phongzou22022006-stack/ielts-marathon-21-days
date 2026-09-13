@@ -84,6 +84,33 @@ class IELTSMarathonApp {
         mockNav.style.display = 'none';
       }
     }
+    const brandDays = document.getElementById('brand-days');
+    if (brandDays) brandDays.textContent = this.totalDays;
+    const brandSub = document.getElementById('brand-subtitle');
+    if (brandSub) brandSub.textContent = 'LỘ TRÌNH ' + this.totalDays + ' NGÀY';
+    if (document.title && document.title.indexOf('IELTS Marathon') === 0) {
+      document.title = 'IELTS Marathon ' + this.totalDays + ' Days - ' + this.trackMeta.shortLabel;
+    }
+  }
+
+  showToast(message, type = 'info', duration = 3200) {
+    const root = document.getElementById('toast-root');
+    if (!root) return;
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    const icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
+    el.innerHTML = '<span class="toast-icon">' + icon + '</span><span class="toast-msg">' + escapeHtml(message) + '</span>';
+    root.appendChild(el);
+    // Nếu nhiều toast cùng lúc, giới hạn 3 cái
+    while (root.children.length > 3) root.firstChild.remove();
+    const close = () => {
+      if (!el.parentNode) return;
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 200);
+    };
+    setTimeout(close, duration);
+    el.addEventListener('click', close);
   }
 
   applyTheme(theme) {
@@ -112,6 +139,16 @@ class IELTSMarathonApp {
         this.navigateTo(el.getAttribute('data-mobile-nav'));
       });
     });
+
+    const timerPill = document.querySelector('.timer-pill');
+    if (timerPill) {
+      timerPill.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          timerPill.click();
+        }
+      });
+    }
   }
 
   navigateTo(view, extra = {}) {
@@ -129,6 +166,7 @@ class IELTSMarathonApp {
     if (day < 1 || day > this.totalDays) return;
     this.currentDay = day;
     StorageService.setCurrentDay(day, this.track);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     this.render();
   }
 
@@ -261,7 +299,7 @@ class IELTSMarathonApp {
         this.updateTimerDisplay();
       } else {
         this.pauseTimer();
-        alert('⏱️ Hết thời gian học dự kiến! Hãy dành 5 phút rà soát sản phẩm đã nộp.');
+        this.showToast('⏱️ Hết thời gian học dự kiến! Hãy dành 5 phút rà soát sản phẩm đã nộp.', 'info', 5000);
       }
     }, 1000);
     this.updateTimerDisplay();
@@ -313,13 +351,13 @@ class IELTSMarathonApp {
     if (!root) return;
 
     document.querySelectorAll('[data-nav]').forEach(el => {
-      if (el.getAttribute('data-nav') === this.currentView) el.classList.add('text-[var(--accent-terracotta)]', 'font-bold');
-      else el.classList.remove('text-[var(--accent-terracotta)]', 'font-bold');
+      if (el.getAttribute('data-nav') === this.currentView) el.classList.add('nav-active', 'font-bold');
+      else el.classList.remove('nav-active', 'font-bold');
     });
 
     document.querySelectorAll('[data-mobile-nav]').forEach(el => {
-      if (el.getAttribute('data-mobile-nav') === this.currentView) el.classList.add('text-[var(--accent-terracotta)]', 'font-bold');
-      else el.classList.remove('text-[var(--accent-terracotta)]', 'font-bold');
+      if (el.getAttribute('data-mobile-nav') === this.currentView) el.classList.add('nav-active', 'font-bold');
+      else el.classList.remove('nav-active', 'font-bold');
     });
 
     if (this.currentView === 'dashboard') root.innerHTML = this.renderDashboard();
@@ -1252,7 +1290,8 @@ class IELTSMarathonApp {
         const badge = document.getElementById('listen-counter-badge');
         if (badge) badge.textContent = `Lượt nghe: ${progress.listeningListenCount}`;
       }).catch(err => {
-        alert('Trình phát Audio Listening đã sẵn sàng. Bạn có thể bấm tua, đổi tốc độ hoặc đọc transcript để đối chiếu.');
+        if (btn) btn.blur();
+        this.showToast('Trình phát Audio Listening đã sẵn sàng. Bạn có thể bấm tua, đổi tốc độ hoặc đọc transcript để đối chiếu.', 'info', 4000);
       });
     } else {
       audio.pause();
@@ -1308,7 +1347,7 @@ class IELTSMarathonApp {
     const cat = document.getElementById('listening-err-category')?.value;
     const desc = document.getElementById('listening-err-desc')?.value;
     if (!cat || !desc) {
-      alert('Vui lòng chọn loại lỗi và nhập mô tả chi tiết.');
+      this.showToast('Vui lòng chọn loại lỗi và nhập mô tả chi tiết.', 'error');
       return;
     }
     StorageService.addErrorLog({
@@ -1317,14 +1356,14 @@ class IELTSMarathonApp {
       errorType: cat,
       description: desc
     });
-    alert('Đã lưu lỗi Listening vào Nhật ký lỗi ưu tiên!');
+    this.showToast('Đã lưu lỗi Listening vào Nhật ký lỗi ưu tiên!', 'success');
     document.getElementById('listening-err-desc').value = '';
   }
 
   submitFirstDraft() {
     const text = document.getElementById('first-draft-textarea')?.value.trim();
     if (!text || text.split(/\s+/).length < 20) {
-      alert('Vui lòng hoàn thành bản nháp đầu tiên (tối thiểu 20 từ) trước khi nộp.');
+      this.showToast('Vui lòng hoàn thành bản nháp đầu tiên (tối thiểu 20 từ) trước khi nộp.', 'error');
       return;
     }
     if (confirm('Quy tắc bất biến: Sau khi nộp, bản nháp đầu tiên sẽ bị KHÓA vĩnh viễn để bảo tồn bằng chứng. Bạn có chắc chắn muốn nộp không?')) {
@@ -1332,6 +1371,7 @@ class IELTSMarathonApp {
       progress.writingFirstDraft = text;
       progress.writingFirstDraftLocked = true;
       StorageService.saveDayProgress(this.currentDay, progress);
+      this.showToast('Đã khóa bản nháp đầu tiên vĩnh viễn.', 'success');
       this.render();
     }
   }
@@ -1363,7 +1403,7 @@ class IELTSMarathonApp {
       });
 
       if (!res.success) {
-        alert(res.error);
+        this.showToast(escapeHtml(res.error), 'error');
         return;
       }
 
@@ -1464,7 +1504,7 @@ class IELTSMarathonApp {
       errorType: 'Lỗi ghi chú nhanh',
       description: desc
     });
-    alert('Đã lưu lỗi vào Nhật ký!');
+    this.showToast('Đã lưu lỗi vào Nhật ký!', 'success');
     document.getElementById('quick-err-desc').value = '';
   }
 
@@ -1948,8 +1988,8 @@ renderMockTest() {
   resetAllData() {
     if (confirm('CẢNH BÁO: Thao tác này sẽ xóa sạch toàn bộ bản nháp, bản ghi âm và nhật ký lỗi. Bạn có chắc chắn không?')) {
       localStorage.clear();
-      alert('Đã xóa toàn bộ dữ liệu. Ứng dụng sẽ khởi động lại.');
-      window.location.reload();
+      this.showToast('Đã xóa toàn bộ dữ liệu. Ứng dụng sẽ khởi động lại...', 'info', 1800);
+      setTimeout(() => window.location.reload(), 1200);
     }
   }
 
