@@ -231,11 +231,79 @@ class IELTSMarathonApp {
   }
 
   completeOnboarding() {
-    StorageService.setOnboarded(true);
-    this.navigateTo('day-detail', { day: 1 });
-  }
+      StorageService.setOnboarded(true);
+      this.navigateTo('day-detail', { day: 1 });
+    }
 
-  _dayHasActivity(p) {
+    // --- Wave 3: Focus Mode ---
+    toggleFocusMode() {
+      document.body.classList.toggle('focus-mode');
+      const btn = document.getElementById('focus-mode-toggle');
+      if (btn) {
+        btn.classList.toggle('active', document.body.classList.contains('focus-mode'));
+        btn.textContent = document.body.classList.contains('focus-mode') ? '❌ Thoát' : '🎯 Tập trung';
+      }
+    }
+
+    showFocusModeToggle() {
+      const btn = document.getElementById('focus-mode-toggle');
+      if (btn && this.currentView === 'day-detail') {
+        btn.classList.remove('hidden');
+      } else if (btn) {
+        btn.classList.add('hidden');
+      }
+    }
+
+    // --- Wave 3: Bottom Sheet ---
+    openBottomSheet(content) {
+      const sheet = document.getElementById('bottom-sheet');
+      const body = document.getElementById('bottom-sheet-body');
+      if (sheet && body) {
+        body.innerHTML = content;
+        sheet.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    closeBottomSheet(e) {
+      if (e && e.target !== e.currentTarget) return;
+      const sheet = document.getElementById('bottom-sheet');
+      if (sheet) {
+        sheet.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    }
+
+    // --- Wave 3: Day Complete Overlay ---
+    showDayCompleteOverlay() {
+      const overlay = document.getElementById('day-complete-overlay');
+      const dayNum = document.getElementById('complete-day-num');
+      if (overlay && dayNum) {
+        dayNum.textContent = String(this.currentDay).padStart(2, '0');
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    closeDayComplete(e) {
+      if (e && e.target !== e.currentTarget) return;
+      const overlay = document.getElementById('day-complete-overlay');
+      if (overlay) {
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    }
+
+    goToNextDay() {
+      this.closeDayComplete();
+      if (this.currentDay < this.totalDays) {
+        this.navigateTo('day-detail', { day: this.currentDay + 1 });
+      } else {
+        this.navigateTo('dashboard');
+      }
+    }
+
+    _dayHasActivity(p) {
     if (!p || typeof p !== 'object') return false;
     return (
       (p.checklistCompleted && p.checklistCompleted.length > 0) ||
@@ -421,7 +489,8 @@ class IELTSMarathonApp {
         this.syncHeader();
         this.updateTimerDisplay();
         this.updateStickyActionBar();
-        this.bindDayDetailEvents();
+            this.showFocusModeToggle();
+            this.bindDayDetailEvents();
       }
 
   collectVocab() {

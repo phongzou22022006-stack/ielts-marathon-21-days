@@ -106,11 +106,52 @@
   <main id="app-root" class="flex-1"></main>
 
   <!-- Sticky Action Bar (Wave 1 P0) -->
-  <div id="sticky-action-bar" class="sticky-action-bar" role="navigation" aria-label="Hành động nhanh">
-    <button id="action-prev" class="btn btn-secondary text-xs" onclick="window.app.navigatePrevDay()">← Trước</button>
-    <span class="action-status" id="action-status">Bước 1/8</span>
-    <button id="action-next" class="btn btn-primary text-xs" onclick="window.app.navigateNextDay()">Tiếp →</button>
-  </div>
+    <div id="sticky-action-bar" class="sticky-action-bar" role="navigation" aria-label="Hành động nhanh">
+      <button id="action-prev" class="btn btn-secondary text-xs" onclick="window.app.navigatePrevDay()">← Trước</button>
+      <span class="action-status" id="action-status">Bước 1/8</span>
+      <button id="action-next" class="btn btn-primary text-xs" onclick="window.app.navigateNextDay()">Tiếp →</button>
+    </div>
+
+    <!-- Focus Mode Toggle (Wave 3) -->
+    <button id="focus-mode-toggle" class="focus-mode-toggle hidden" onclick="window.app.toggleFocusMode()" title="Bật chế độ tập trung">
+      🎯 Tập trung
+    </button>
+
+    <!-- Bottom Sheet Container (Wave 3) -->
+    <div id="bottom-sheet" class="bottom-sheet" onclick="window.app.closeBottomSheet(event)">
+      <div class="bottom-sheet-backdrop"></div>
+      <div class="bottom-sheet-content">
+        <div class="bottom-sheet-handle"></div>
+        <div id="bottom-sheet-body"></div>
+      </div>
+    </div>
+
+    <!-- Day Complete Overlay (Wave 3) -->
+    <div id="day-complete-overlay" class="day-complete-overlay" onclick="window.app.closeDayComplete(event)">
+      <div class="day-complete-card" onclick="event.stopPropagation()">
+        <div class="day-complete-icon">🎉</div>
+        <h2 class="font-display text-xl font-bold text-[var(--ink-primary)]">Ngày <span id="complete-day-num">00</span> hoàn thành!</h2>
+        <div class="day-complete-stats">
+          <div class="day-complete-stat">
+            <div class="day-complete-stat-value" id="complete-time">--</div>
+            <div class="day-complete-stat-label">phút thực tế</div>
+          </div>
+          <div class="day-complete-stat">
+            <div class="day-complete-stat-value" id="complete-correct">--</div>
+            <div class="day-complete-stat-label">câu đúng</div>
+          </div>
+          <div class="day-complete-stat">
+            <div class="day-complete-stat-value" id="complete-errors">--</div>
+            <div class="day-complete-stat-label">lỗi đã ghi</div>
+          </div>
+        </div>
+        <p class="text-xs text-[var(--ink-secondary)] mb-4" id="complete-message">Tốt lắm! Hãy ghi nhật ký lỗi trước khi nghỉ nhé.</p>
+        <div class="flex gap-3 justify-center">
+          <button class="btn btn-secondary" onclick="window.app.closeDayComplete()">Đóng</button>
+          <button class="btn btn-primary" onclick="window.app.goToNextDay()">Sang ngày →</button>
+        </div>
+      </div>
+    </div>
 
   <!-- Toast Notifications (non-blocking feedback) -->
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="false"></div>
