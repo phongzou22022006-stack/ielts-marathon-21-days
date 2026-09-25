@@ -64,11 +64,15 @@ body {
   background-color: var(--canvas);
   color: var(--ink-primary);
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
+}
+
+input, textarea, select {
+  font-size: 16px !important;
 }
 
 html {
