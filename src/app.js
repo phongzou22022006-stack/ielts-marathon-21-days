@@ -586,21 +586,56 @@ class IELTSMarathonApp {
     })();
     const currentPhaseNum = (this.curriculum[nextDay - 1] || this.curriculum[0]).phase;
     const streak = (() => {
-      const studied = new Set();
-      Object.values(allProgress).forEach(p => {
-        if (p && p.lastUpdated) studied.add(new Date(p.lastUpdated).toDateString());
-      });
-      let cursor = new Date();
-      if (!studied.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
-      let s = 0;
-      while (studied.has(cursor.toDateString())) {
-        s++;
-        cursor.setDate(cursor.getDate() - 1);
-      }
-      return s;
-    })();
+          const studied = new Set();
+          Object.values(allProgress).forEach(p => {
+            if (p && p.lastUpdated) studied.add(new Date(p.lastUpdated).toDateString());
+          });
+          let cursor = new Date();
+          if (!studied.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+          let s = 0;
+          while (studied.has(cursor.toDateString())) {
+            s++;
+            cursor.setDate(cursor.getDate() - 1);
+          }
+          return s;
+        })();
 
-    let phasesHtml = '';
+        // StreakCalendar - last 7 days
+        const daysOfWeek = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+        const today = new Date();
+        const streakDays = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toDateString();
+          const isStudied = studied.has(dateStr);
+          const isToday = i === 0;
+          streakDays.push({ day: daysOfWeek[d.getDay() === 0 ? 6 : d.getDay() - 1], studied: isStudied, today: isToday });
+        }
+
+        // JourneyMap - vertical timeline
+        let journeyMapHtml = '<div class="journey-map">';
+        this.curriculum.forEach((dayItem, idx) => {
+          const isCurrent = dayItem.day === this.currentDay;
+          const isDone = allProgress[dayItem.day] && allProgress[dayItem.day].checklistCompleted?.length > 0;
+          const isFuture = dayItem.day > this.currentDay;
+          const nodeClass = isDone ? 'done' : (isCurrent ? 'current' : (isFuture ? 'locked' : ''));
+          journeyMapHtml += `
+            <div class="journey-node ${nodeClass}" onclick="window.app.navigateTo('day-detail', { day: ${dayItem.day} })">
+              <div class="editorial-card p-3 flex-1 hover:border-[var(--accent-terracotta)] transition-all">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-mono text-xs font-bold text-[var(--ink-secondary)]">NGÀY ${String(dayItem.day).padStart(2, '0')}</span>
+                  ${dayItem.isCheckpoint ? '<span class="text-[10px]">⭐</span>' : ''}
+                  ${dayItem.isMockTest ? '<span class="text-[10px]">🎯</span>' : ''}
+                </div>
+                <h4 class="font-display text-sm font-bold text-[var(--ink-primary)]">${dayItem.theme}</h4>
+              </div>
+            </div>
+          `;
+        });
+        journeyMapHtml += '</div>';
+
+        let phasesHtml = '';
     this.trackMeta.phases.forEach(phaseMeta => {
       const phaseDays = this.curriculum.filter(d => d.phase === phaseMeta.number);
       const phaseTitle = `Giai đoạn ${phaseMeta.number}: ${phaseMeta.title} (${phaseMeta.range})`;
@@ -673,9 +708,9 @@ class IELTSMarathonApp {
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <div class="flex items-center gap-2 mb-2">
-                <span class="badge ${this.trackMeta.badgeClass} font-mono">${this.trackMeta.label.toUpperCase()}</span>
-                <span class="badge badge-sage font-mono">🔥 Streak: ${streak} ngày</span>
-              </div>
+                      <span class="badge ${this.trackMeta.badgeClass} font-mono">${this.trackMeta.label.toUpperCase()}</span>
+                      <span class="badge badge-sage font-mono">🔥 Streak: ${streak} ngày</span>
+                    </div>
               <h1 class="font-display text-2xl sm:text-3xl font-extrabold text-[var(--ink-primary)] mb-2">
                 IELTS Marathon: Tự học Có kiểm soát
               </h1>
@@ -692,14 +727,14 @@ class IELTSMarathonApp {
           </div>
 
           <div class="mt-6 pt-6 border-t border-[var(--border-subtle)]">
-            <div class="flex justify-between text-xs font-semibold mb-2">
-              <span class="text-[var(--ink-secondary)]">Tiến độ tổng thể: ${completedDays}/${totalN} Ngày</span>
-              <span class="font-mono text-[var(--accent-terracotta)]">${progressPercent}%</span>
-            </div>
-            <div class="w-full bg-[var(--surface-muted)] rounded-full h-2.5 overflow-hidden border border-[var(--border-subtle)]">
-              <div class="bg-[var(--accent-terracotta)] h-2.5 rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div>
-            </div>
-          </div>
+                      <div class="flex justify-between text-xs font-semibold mb-2">
+                        <span class="text-[var(--ink-secondary)]">Tiến độ tổng thể: ${completedDays}/${totalN} Ngày</span>
+                        <span class="progress-percent font-mono text-[var(--accent-terracotta)]" data-percent="${progressPercent}">${progressPercent}%</span>
+                      </div>
+                      <div class="progress-fill">
+                        <div class="progress-fill-bar" style="width: ${progressPercent}%"></div>
+                      </div>
+                    </div>
         </div>
         <div class="editorial-card p-5 mb-6 flex flex-wrap items-center justify-between gap-4 hover:border-[var(--accent-terracotta)] transition-all cursor-pointer" onclick="window.app.navigateTo('review')" role="button" tabindex="0">
           <div class="flex items-center gap-3 min-w-0">
@@ -1445,15 +1480,35 @@ class IELTSMarathonApp {
 
   // --- Handlers for Daily Actions ---
   toggleChecklist(idx) {
-    const progress = StorageService.getDayProgress(this.currentDay);
-    const list = progress.checklistCompleted || [];
-    const index = list.indexOf(idx);
-    if (index > -1) list.splice(index, 1);
-    else list.push(idx);
-    progress.checklistCompleted = list;
-    StorageService.saveDayProgress(this.currentDay, progress);
-    this.render();
-  }
+      const progress = StorageService.getDayProgress(this.currentDay);
+      const list = progress.checklistCompleted || [];
+      const index = list.indexOf(idx);
+      const wasChecked = index > -1;
+      if (index > -1) list.splice(index, 1);
+      else list.push(idx);
+      progress.checklistCompleted = list;
+      StorageService.saveDayProgress(this.currentDay, progress);
+    
+      // CheckPop animation
+      if (!wasChecked) {
+        setTimeout(() => {
+          const checkbox = document.querySelector(`input[onchange*="toggleChecklist(${idx})"]`);
+          if (checkbox) {
+            checkbox.classList.add('check-pop');
+            const ring = document.createElement('span');
+            ring.className = 'check-pop-ring';
+            checkbox.parentElement.style.position = 'relative';
+            checkbox.parentElement.appendChild(ring);
+            setTimeout(() => {
+              checkbox.classList.remove('check-pop');
+              ring.remove();
+            }, 400);
+          }
+        }, 10);
+      }
+    
+      this.render();
+    }
 
   saveReadingAnswer(qId, val) {
     const progress = StorageService.getDayProgress(this.currentDay);
