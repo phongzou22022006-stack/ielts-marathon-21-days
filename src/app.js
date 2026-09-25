@@ -165,12 +165,56 @@ class IELTSMarathonApp {
   }
 
   setDay(day) {
-    if (day < 1 || day > this.totalDays) return;
-    this.currentDay = day;
-    StorageService.setCurrentDay(day, this.track);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    this.render();
-  }
+      if (day < 1 || day > this.totalDays) return;
+      this.currentDay = day;
+      StorageService.setCurrentDay(day, this.track);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.render();
+    }
+
+    navigatePrevDay() {
+      if (this.currentDay > 1) {
+        this.setDay(this.currentDay - 1);
+      }
+    }
+
+    navigateNextDay() {
+      if (this.currentDay < this.totalDays) {
+        this.setDay(this.currentDay + 1);
+      }
+    }
+
+    updateStickyActionBar() {
+      const bar = document.getElementById('sticky-action-bar');
+      const prevBtn = document.getElementById('action-prev');
+      const nextBtn = document.getElementById('action-next');
+      const status = document.getElementById('action-status');
+      if (!bar || !prevBtn || !nextBtn || !status) return;
+
+      // Only show on day-detail view
+      if (this.currentView !== 'day-detail') {
+        bar.classList.remove('visible');
+        return;
+      }
+
+      const dayData = this.curriculum.find(d => d.day === this.currentDay) || this.curriculum[0];
+      const dayProgress = StorageService.getDayProgress(this.currentDay);
+      const { steps, currentIdx, allDone } = this.computeDaySteps(dayData, dayProgress);
+
+      // Update status
+      status.textContent = allDone 
+        ? `✓ Hoàn thành Ngày ${this.currentDay}` 
+        : `Bước ${currentIdx + 1}/${steps.length}`;
+
+      // Update buttons
+      prevBtn.disabled = this.currentDay <= 1;
+      prevBtn.classList.toggle('opacity-50', this.currentDay <= 1);
+    
+      nextBtn.textContent = this.currentDay >= this.totalDays ? '🏁 Về Dashboard' : 'Tiếp →';
+    
+      // Show bar
+      bar.classList.add('visible');
+    }
 
   setRhythm(rhythm) {
     this.rhythm = parseInt(rhythm, 10);
@@ -373,11 +417,12 @@ class IELTSMarathonApp {
     else if (this.currentView === 'settings') root.innerHTML = this.renderSettings();
     else root.innerHTML = this.renderDayDetail();
     if (this.currentView === 'day-detail') this.applyGuidedSteps(root);
-    else if (this.currentView === 'review') this.bindReviewEvents();
-    this.syncHeader();
-    this.updateTimerDisplay();
-    this.bindDayDetailEvents();
-  }
+        else if (this.currentView === 'review') this.bindReviewEvents();
+        this.syncHeader();
+        this.updateTimerDisplay();
+        this.updateStickyActionBar();
+        this.bindDayDetailEvents();
+      }
 
   collectVocab() {
     const out = [];
@@ -766,8 +811,15 @@ class IELTSMarathonApp {
           <p class="text-sm font-bold text-[var(--ink-primary)] mb-1">${p.title || ''}</p>
           ${p.strategy ? `<p class="text-xs text-[var(--ink-secondary)] mb-3">${p.strategy}</p>` : ''}
         ` : ''}
-        <div class="p-4 bg-[var(--surface-muted)] rounded-lg text-xs sm:text-sm font-editorial leading-relaxed max-h-64 overflow-y-auto mb-4 border border-[var(--border-subtle)]">
-          ${this._passageHtml(p.passage)}
+        <div class="passage-container mb-4">
+          <details class="lg:details-open" ${typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'open' : ''}>
+            <summary class="cursor-pointer text-xs font-semibold text-[var(--ink-secondary)] mb-2 py-2 px-3 bg-[var(--surface-muted)] rounded-lg border border-[var(--border-subtle)] hover:border-[var(--accent-terracotta)] transition-colors lg:hidden">
+              📖 Hiện đoạn văn
+            </summary>
+            <div class="passage-text p-4 bg-[var(--surface-muted)] rounded-lg font-editorial leading-[1.65] border border-[var(--border-subtle)]">
+              ${this._passageHtml(p.passage)}
+            </div>
+          </details>
         </div>
         <div class="space-y-4 mb-5">
           ${(p.questions || []).map((q, qIdx) => this._questionBlockHtml(q, qIdx, dayProgress.readingAnswers || {}, wasChecked ? (checkResult.byId[q.id] || null) : null)).join('')}
@@ -850,31 +902,30 @@ class IELTSMarathonApp {
           </div>
         </div>
 
-        ${this.mode === 'guided' ? (() => {
-          const { steps, currentIdx, allDone, currentId } = this.computeDaySteps(dayData, dayProgress);
-          const currentStep = allDone ? null : steps[currentIdx];
-          return `
-          <div class="editorial-card p-4 mb-6">
-            <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
-              <span class="font-mono text-xs font-bold text-[var(--ink-primary)]">🧭 LỘ TRÌNH NGÀY HÔM NAY</span>
-              <span class="text-[11px] text-[var(--ink-secondary)]">${allDone ? `Hoàn thành ${steps.length}/${steps.length}` : `Bước ${currentIdx + 1}/${steps.length}`}</span>
-            </div>
-            <div class="flex flex-wrap gap-1.5 mb-2">
-              ${steps.map((s, i) => {
-                const state = allDone ? 'done' : (i < currentIdx ? 'done' : (i === currentIdx ? 'current' : 'locked'));
-                return `
-                <button onclick="window.app.jumpStep('${s.id}')" class="px-2 py-1 rounded-md text-[11px] font-bold border transition-all ${state === 'done' ? 'bg-[var(--accent-sage)]/10 text-[var(--accent-sage)] border-[var(--accent-sage)]/30' : state === 'current' ? 'bg-[var(--accent-terracotta)] text-white border-[var(--accent-terracotta)]' : 'bg-[var(--surface-muted)] text-[var(--ink-muted)] border-[var(--border-subtle)]'}">${state === 'done' ? '✓' : state === 'current' ? '▶' : '🔒'} ${i + 1}. ${s.label}</button>
-              `;
-              }).join('')}
-            </div>
-            <p class="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
-              ${allDone
-                ? '🎉 Tất cả bước hôm nay đã xong. Nhớ ghi nhật ký lỗi, chốt sản phẩm nộp, rồi chuyển sang ngày tiếp theo.'
-                : 'Đang ở bước: <strong>' + currentStep.label + '</strong> — làm xong bước này, bước kế tiếp sẽ mở ra. Bấm chip để xem lại bước đã xong.'}
-            </p>
-          </div>
-        `;
-        })() : ''}
+        ${(() => {
+                  const { steps, currentIdx, allDone, currentId } = this.computeDaySteps(dayData, dayProgress);
+                  const currentStep = allDone ? null : steps[currentIdx];
+                  return `
+                  <div class="editorial-card p-3 mb-4 overflow-hidden">
+                    <div class="task-stepper" id="task-stepper">
+                      ${steps.map((s, i) => {
+                        const state = allDone ? 'done' : (i < currentIdx ? 'done' : (i === currentIdx ? 'current' : 'locked'));
+                        return `
+                        <button class="step-node ${state}" onclick="window.app.jumpStep('${s.id}')" title="${s.label}" aria-label="Bước ${i + 1}: ${s.label}">
+                          <div class="step-node-circle">${state === 'done' ? '✓' : state === 'current' ? (i + 1) : (i + 1)}</div>
+                          <div class="step-node-label">${s.label.replace(/ & .*/, '').substring(0, 8)}</div>
+                        </button>
+                        `;
+                      }).join('')}
+                    </div>
+                    <p class="text-[11px] text-[var(--ink-secondary)] leading-relaxed mt-1 px-1">
+                      ${allDone
+                        ? '🎉 Hoàn thành! Nhớ ghi nhật ký lỗi, chốt sản phẩm nộp, rồi chuyển sang ngày tiếp theo.'
+                        : 'Đang ở bước: <strong>' + currentStep.label + '</strong> — làm xong bước này sẽ mở bước kế tiếp.'}
+                    </p>
+                  </div>
+                `;
+                })()}
 
         <!-- 3 Columns Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">

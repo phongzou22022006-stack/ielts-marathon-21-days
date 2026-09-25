@@ -2,7 +2,7 @@
 <html lang="vi" data-theme="light">
 <head>
   <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>IELTS Marathon 21 Days - Tự học có kiểm soát</title>
   <meta name="description" content="Nền tảng tự học IELTS 21 ngày chuyển thể từ IELTS Marathon 21-Day Companion với đầy đủ module Listening mới, bằng chứng xác thực và quy tắc bản đầu bất biến.">
   <meta name="theme-color" content="#c2410c">
@@ -104,6 +104,13 @@
 
 <!-- Main View Root -->
   <main id="app-root" class="flex-1"></main>
+
+  <!-- Sticky Action Bar (Wave 1 P0) -->
+  <div id="sticky-action-bar" class="sticky-action-bar" role="navigation" aria-label="Hành động nhanh">
+    <button id="action-prev" class="btn btn-secondary text-xs" onclick="window.app.navigatePrevDay()">← Trước</button>
+    <span class="action-status" id="action-status">Bước 1/8</span>
+    <button id="action-next" class="btn btn-primary text-xs" onclick="window.app.navigateNextDay()">Tiếp →</button>
+  </div>
 
   <!-- Toast Notifications (non-blocking feedback) -->
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="false"></div>
